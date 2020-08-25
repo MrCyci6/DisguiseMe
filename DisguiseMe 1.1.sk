@@ -1,0 +1,1258 @@
+#This script works from minecraft 1.8 up to minecraft 1.16
+#You can contact me on Spigot/SkUnity or Discord (Phe0X#5907) if you find any bug or need help
+#Addons needed are ThatPacketAddon, ProtocolLib and Skript-mirror
+#You can customize the name of each mob below, you just have to modify the options
+#For example, if you want to call the Armorstand "Stand", just change "Armorstand" by "Stand"
+#When you'll use /disguise Armorstand, it won't work anymore, instead you will have to use the command /disguise Stand
+
+#If you are a dev and you want some function to disguise some players for others, check this https://phe0x.fr/DisguiseMe/Functions.html/ or the code
+
+
+#Special thanks to Rush²Fer (He helped me to put the name of player above a disguise, because ThatPacketAddon can't take OptionalChat) and to CarloDrift (Discovered some bugs and gave some ideas)
+options:
+	Name: true #Name of the disguised player above its disguise
+	#⚠ Don't work on some entities that can't be renamed such as the Armorstand
+	#[Doesn't seem to work with Kosmos in 1.15.2 idk why]
+
+	UpdateHand: true #Show the right item in the hand of a player that just changed its disguise
+
+	UpdateStuffExp: true #⚠Show the right armor when a player disguises himself in 1.12 or less
+
+	UpdateHead: true #Make have the right yaw when he comes into visible range
+	
+	SkinReload: true #Reload the skin when the player remove his disguise (otherwise capes, hats.. don't show up)
+	#⚠ This bug occurs only in 1.15 or 1.16, if you're not in 1.15 or above this option won't do anything
+	
+	JoinDelay: 1.5 seconds #Useful only from 1.9 to 1.11, time during which after connection the player is not disguised (necessary otherwise the player becomes invisible when he connects)
+	#!!!Modify at your own risk, can make the players near the disguised crash when he connects!!!
+	#It works with 1 seconds, but test on your own server
+		
+	#You can modify the names, but only after the ":" (not before)
+	
+	ArmorStand: ArmorStand
+	Bat: Bat
+	Bee: Bee
+	Blaze: Blaze
+	Cat: Cat
+	Cave_Spider: CaveSpider
+	Chicken: Chicken
+	Cod: Cod
+	Cow: Cow
+	Creeper: Creeper
+	Donkey: Donkey
+	Dolphin: Dolphin
+	Drowned: Drowned
+	Elder_Guardian: ElderGuardian
+	Ender_Dragon: EnderDragon
+	Enderman: Enderman
+	Endermite: Endermite
+	Evoker: Evoker
+	Fox: Fox
+	Ghast: Ghast
+	Giant: Giant
+	Guardian: Guardian
+	Hoglin: Hoglin
+	Horse: Horse
+	Husk: Husk
+	Illusioner: Illusioner
+	Iron_Golem: IronGolem
+	Llama: Llama
+	Magma_Cube: MagmaCube
+	Mule: Mule
+	Mooshroom: Mooshroom
+	Ocelot: Ocelot
+	Panda: Panda
+	Parrot: Parrot
+	Phantom: Phantom
+	Pig: Pig
+	Piglin: Piglin
+	PufferFish: PufferFish
+	Polar_Bear: PolarBear
+	Rabbit: Rabbit
+	Ravager: Ravager
+	Salmon: Salmon
+	Sheep: Sheep
+	Shulker: Shulker
+	SilverFish: SilverFish
+	Skeleton: Skeleton
+	Skeleton_Horse: SkeletonHorse
+	Slime: Slime
+	Snow_Golem: SnowGolem
+	Spider: Spider
+	Squid: Squid
+	Stray: Stray
+	Strider: Strider
+	Trader_Llama: TraderLlama
+	Tropical_Fish: TropicalFish
+	Turtle: Turtle
+	Vex: Vex
+	Villager: Villager
+	Vindicator: Vindicator
+	Pillager: Pillager
+	Wandering_Trader: WanderingTrader
+	Witch: Witch
+	Wither: Wither
+	Wither_Skeleton: WitherSkeleton
+	Wolf: Wolf
+	Zoglin: Zoglin
+	Zombie: Zombie
+	Zombie_Horse: ZombieHorse
+	Zombie_Pigman: ZombiePigman
+	Zombie_Villager: ZombieVillager
+	Zombified_Piglin: ZombifiedPiglin
+	
+option ver:
+	get:
+		return console.getServer().getClass().getPackage().getName().split("\.")[3] #Nms version
+import: #mandatory to have a name above the disguise, since TPA doesn't have optional chat things (so I must use protocollib & mirror)
+	java.util.Optional 
+	net.minecraft.server.{@ver}.ChatComponentText 
+	com.comphenix.protocol.wrappers.WrappedDataWatcher 
+	com.comphenix.protocol.wrappers.WrappedDataWatcher$Registry as DWReg
+	com.comphenix.protocol.wrappers.WrappedDataWatcher$WrappedDataWatcherObject as DWObject
+on load: #Plugins & Settings that could create problems
+	set {_mc::*} to minecraft version split at "."
+	set {_mc::2} to {_mc::2} parsed as an integer
+	set {DM::MCVersion} to {_mc::2}
+	loop all players:
+		loop-player is op
+		add loop-player to {_sendto::*}
+	add console to {_sendto::*}
+	set {_pluginlist::*} to ...server.getServer().getPluginManager().getPlugins()
+	if {_pluginlist::*} contains "ViaVersion" or "ViaBackwards" or "ProtocolSupport" or "ViaRewind": #Send a message if a plugin that can change the way packets work is on the server
+		send "&6DisguiseMe &b> &6DisguiseMe &b> &4!!! You have a plugin that can change minecraft's protocol &d(ViaVersion, ViaBackwards, ViaRewind, ProtocolSupport..), &4this script may not work as intended !!!" to console #Envoie a la console uniquement, car peut ne rien changer
+	set {_list::*} to "ProtocolLib" and "ThatPacketAddon"
+	loop {_list::*}:
+		{_pluginlist::*} is set
+		if "%{_pluginlist::*}%" does not contain "%loop-value%": #send a message if a plugin is missing
+			add loop-value to {_missing::*}
+	if {_missing::*} is set:
+		send "&6DisguiseMe &b> &4!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" to {_sendto::*}
+		send "&6DisguiseMe &b> &4!                                                  !" to {_sendto::*}
+		send "&6DisguiseMe &b> &4!   &3%size of {_missing::*}%&4 mandatory plugin(s) missing                  !" to {_sendto::*}
+		send "&6DisguiseMe &b> &4Please add &3%{_missing::*}%" to {_sendto::*}
+		send "&6DisguiseMe &b> &4!                                                  !" to {_sendto::*}
+		send "&6DisguiseMe &b> &4!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" to {_sendto::*}
+	if {DM::MCVersion} is 9 or 10 or 11:
+		if {@JoinDelay} < 1 second:
+			send "&6DisguiseMe &b> &4!!! The Join delay is less than 1 second, this could cause crashes to nearby players when a disguised player connects !!!" to {_sendto::*}
+
+#Functions must be at the beginning with old versions of minecraft
+
+
+#---------------------------------------------
+#
+#These functions convert a name into an Id (minecraft doesn't use "Sheep" for a sheep, it uses a number which changes almost every version)
+#
+#---------------------------------------------
+
+#Function that converts a mob into an id for 1.15, 1.14 and 1.13
+function MobToId(mob: text) :: int: #When an entity spawns, minecraft use a TypeOfMob which is a number and not its name (enderman -> 19 in 1.14 for instance) https://phe0x.fr/dev/ if you want to check quickly
+	if {_mob} is "{@Bee}":
+		if {DM::MCVersion} is 15:
+			return 4
+		else:
+			return -5
+	if {_mob} is "{@Hoglin}" or "{@Piglin}" or "{@Strider}" or "{@Zoglin}" or "{@Zombified_Piglin}": #Mob 1.16 uniquement, impossible avec la fonction utilisé en dessous
+		return -5
+	if {DM::MCVersion} is 13:
+		if {_mob} is "{@Cat}" or "{@Fox}" or "{@Panda}" or "{@Trader_Llama}" or "{@Pillager}" or "{@Wandering_Trader}" or "{@Ravager}":
+			return -5
+	if {_mob} is "{@ArmorStand}":
+		return 1
+	if {_mob} is "{@Bat}":
+		return 3
+	if {_mob} is "{@Blaze}":
+		return 4
+	if {_mob} is "{@Cat}":
+		return 6
+	if {_mob} is "{@Cave_Spider}":
+		return 7
+	if {_mob} is "{@Chicken}":
+		return 8
+	if {_mob} is "{@Cod}":
+		return 9
+	if {_mob} is "{@Cow}":
+		return 10
+	if {_mob} is "{@Creeper}":
+		return 11
+	if {_mob} is "{@Donkey}":
+		return 12
+	if {_mob} is "{@Dolphin}":
+		return 13
+	if {_mob} is "{@Drowned}":
+		return 15
+	if {_mob} is "{@Elder_Guardian}":
+		return 16
+	if {_mob} is "{@Ender_Dragon}":
+		return 18
+	if {_mob} is "{@Enderman}":
+		return 19
+	if {_mob} is "{@Endermite}":
+		return 20
+	if {_mob} is "{@Evoker}":
+		return 22
+	if {_mob} is "{@Fox}":
+		return 27
+	if {_mob} is "{@Ghast}":
+		return 28
+	if {_mob} is "{@Giant}":
+		return 29
+	if {_mob} is "{@Guardian}":
+		return 30
+	if {_mob} is "{@Horse}":
+		return 31
+	if {_mob} is "{@Husk}":
+		return 32
+	if {_mob} is "{@Illusioner}":
+		return 33
+	if {_mob} is "{@Llama}":
+		return 38
+	if {_mob} is "{@Magma_Cube}":
+		return 39
+	if {_mob} is "{@Mule}":
+		return 48
+	if {_mob} is "{@Mooshroom}":
+		return 49
+	if {_mob} is "{@Ocelot}":
+		return 50
+	if {_mob} is "{@Panda}":
+		return 52
+	if {_mob} is "{@Parrot}":
+		return 53
+	if {_mob} is "{@Pig}":
+		return 54
+	if {_mob} is "{@PufferFish}":
+		return 55
+	if {_mob} is "{@Zombie_Pigman}":
+		return 56
+	if {_mob} is "{@Polar_Bear}":
+		return 57
+	if {_mob} is "{@Rabbit}":
+		return 59
+	if {_mob} is "{@Salmon}":
+		return 60
+	if {_mob} is "{@Sheep}":
+		return 61
+	if {_mob} is "{@Shulker}":
+		return 62
+	if {_mob} is "{@SilverFish}":
+		return 64
+	if {_mob} is "{@Skeleton}":
+		return 65
+	if {_mob} is "{@Skeleton_Horse}":
+		return 66
+	if {_mob} is "{@Slime}":
+		return 67
+	if {_mob} is "{@Snow_Golem}":
+		return 69
+	if {_mob} is "{@Spider}":
+		return 72
+	if {_mob} is "{@Squid}":
+		return 73
+	if {_mob} is "{@Stray}":
+		return 74
+	if {_mob} is "{@Trader_Llama}":
+		return 75
+	if {_mob} is "{@Tropical_Fish}":
+		return 76
+	if {_mob} is "{@Turtle}":
+		return 77
+	if {_mob} is "{@Vex}":
+		return 83
+	if {_mob} is "{@Villager}":
+		return 84
+	if {_mob} is "{@Iron_Golem}":
+		return 85
+	if {_mob} is "{@Vindicator}":
+		return 86
+	if {_mob} is "{@Pillager}":
+		return 87
+	if {_mob} is "{@Wandering_Trader}":
+		return 88
+	if {_mob} is "{@Witch}":
+		return 89
+	if {_mob} is "{@Wither}":
+		return 90
+	if {_mob} is "{@Wither_Skeleton}":
+		return 91
+	if {_mob} is "{@Wolf}":
+		return 93
+	if {_mob} is "{@Zombie}":
+		return 94
+	if {_mob} is "{@Zombie_Horse}":
+		return 95
+	if {_mob} is "{@Zombie_Villager}":
+		return 96
+	if {_mob} is "{@Phantom}":
+		return 97
+	if {_mob} is "{@Ravager}":
+		return 98
+	return -1
+#Function that converts a mob into an id for 1.16
+function MobToId16(mob: text) :: int: #Needs a new function, since there's almost no logical order (except Alphabetical, but hey, that's faster this way)
+	if {_mob} is "{@Zombie_Pigman}":
+		return -6 #Removed
+	if {_mob} is "{@ArmorStand}":
+		return 1
+	if {_mob} is "{@Bat}":
+		return 3
+	if {_mob} is "{@Bee}":
+		return 4
+	if {_mob} is "{@Blaze}":
+		return 5
+	if {_mob} is "{@Cat}":
+		return 7
+	if {_mob} is "{@Cave_Spider}":
+		return 8
+	if {_mob} is "{@Chicken}":
+		return 9
+	if {_mob} is "{@Cod}":
+		return 10
+	if {_mob} is "{@Cow}":
+		return 11
+	if {_mob} is "{@Creeper}":
+		return 12
+	if {_mob} is "{@Dolphin}":
+		return 13
+	if {_mob} is "{@Donkey}":
+		return 14
+	if {_mob} is "{@Drowned}":
+		return 16
+	if {_mob} is "{@Elder_Guardian}":
+		return 17
+	if {_mob} is "{@Ender_Dragon}":
+		return 19
+	if {_mob} is "{@Enderman}":
+		return 20
+	if {_mob} is "{@Endermite}":
+		return 21
+	if {_mob} is "{@Evoker}":
+		return 22
+	if {_mob} is "{@Fox}":
+		return 28
+	if {_mob} is "{@Ghast}":
+		return 29
+	if {_mob} is "{@Giant}":
+		return 30
+	if {_mob} is "{@Guardian}":
+		return 31
+	if {_mob} is "{@Hoglin}":
+		return 32
+	if {_mob} is "{@Horse}":
+		return 33
+	if {_mob} is "{@Husk}":
+		return 34
+	if {_mob} is "{@Illusioner}":
+		return 35
+	if {_mob} is "{@Iron_Golem}":
+		return 36
+	if {_mob} is "{@Llama}":
+		return 42
+	if {_mob} is "{@Magma_Cube}":
+		return 44
+	if {_mob} is "{@Mule}":
+		return 52
+	if {_mob} is "{@Mooshroom}":
+		return 53
+	if {_mob} is "{@Ocelot}":
+		return 54
+	if {_mob} is "{@Panda}":
+		return 56
+	if {_mob} is "{@Parrot}":
+		return 57
+	if {_mob} is "{@Pig}":
+		return 59
+	if {_mob} is "{@Piglin}":
+		return 60
+	if {_mob} is "{@Pillager}":
+		return 61
+	if {_mob} is "{@Polar_Bear}":
+		return 62
+	if {_mob} is "{@PufferFish}":
+		return 64
+	if {_mob} is "{@Rabbit}":
+		return 65
+	if {_mob} is "{@Ravager}":
+		return 66
+	if {_mob} is "{@Salmon}":
+		return 67
+	if {_mob} is "{@Sheep}":
+		return 68
+	if {_mob} is "{@Shulker}":
+		return 69
+	if {_mob} is "{@SilverFish}":
+		return 71
+	if {_mob} is "{@Skeleton}":
+		return 72
+	if {_mob} is "{@Skeleton_Horse}":
+		return 73
+	if {_mob} is "{@Slime}":
+		return 74
+	if {_mob} is "{@Snow_Golem}":
+		return 76
+	if {_mob} is "{@Spider}":
+		return 79
+	if {_mob} is "{@Squid}":
+		return 80
+	if {_mob} is "{@Stray}":
+		return 81
+	if {_mob} is "{@Strider}":
+		return 82
+	if {_mob} is "{@Trader_Llama}":
+		return 88
+	if {_mob} is "{@Tropical_Fish}":
+		return 89
+	if {_mob} is "{@Turtle}":
+		return 90
+	if {_mob} is "{@Vex}":
+		return 91
+	if {_mob} is "{@Villager}":
+		return 92
+	if {_mob} is "{@Vindicator}":
+		return 93
+	if {_mob} is "{@Wandering_Trader}":
+		return 94
+	if {_mob} is "{@Witch}":
+		return 95
+	if {_mob} is "{@Wither}":
+		return 96
+	if {_mob} is "{@Wither_Skeleton}":
+		return 97
+	if {_mob} is "{@Wolf}":
+		return 99
+	if {_mob} is "{@Zoglin}":
+		return 100
+	if {_mob} is "{@Zombie}":
+		return 101
+	if {_mob} is "{@Zombie_Horse}":
+		return 102
+	if {_mob} is "{@Zombie_Villager}":
+		return 103
+	if {_mob} is "{@Zombified_Piglin}":
+		return 104
+	return -1
+#Function that converts a mob into an id for 1.12, 1.11, 1.10, 1.9 and 1.8
+function MobToId12(mob: text) :: int:
+	if {_mob} is "{@Bee}" or "{@Cod}" or "{@Dolphin}" or "{@Drowned}" or "{@Fox}" or "{@Panda}" or "{@PufferFish}" or "{@Salmon}" or "{@Trader_Llama}" or "{@Tropical_Fish}" or "{@Turtle}" or "{@Pillager}" or "{@Wandering_Trader}" or "{@Phantom}" or "{@Ravager}" or "{@Hoglin}" or "{@Piglin}" or "{@Strider}" or "{@Zoglin}" or "{@Zombified_Piglin}":
+		return -5
+	if {DM::MCVersion} <= 11:
+		if {_mob} is "{@Illusioner}" or "{@Parrot}":
+			return -5
+	if {DM::MCVersion} <= 10:
+		if {_mob} is "{@Elder_Guardian}" or "{@Wither_Skeleton}" or "{@Stray}" or "{@Husk}" or "{@Zombie_Villager}" or "{@Skeleton_Horse}" or "{@Zombie_Horse}" or "{@Donkey}" or "{@Mule}" or "{@Evoker}" or "{@Vex}" or "{@Vindicator}" or "{@Llama}":
+			return -5
+	if {DM::MCVersion} <= 9:
+		if {_mob} is "{@Polar_Bear}":
+			return -5
+	if {DM::MCVersion} <= 8:
+		if {_mob} is "{@Shulker}":
+			return -5
+	if {_mob} is "{@Elder_Guardian}":
+		return 4
+	if {_mob} is "{@Wither_Skeleton}":
+		return 5
+	if {_mob} is "{@Stray}":
+		return 6
+	if {_mob} is "{@Husk}":
+		return 23
+	if {_mob} is "{@Zombie_Villager}":
+		return 27
+	if {_mob} is "{@Skeleton_Horse}":
+		return 28
+	if {_mob} is "{@Zombie_Horse}":
+		return 29
+	if {_mob} is "{@ArmorStand}":
+		return 30
+	if {_mob} is "{@Donkey}": 
+		return 31
+	if {_mob} is "{@Mule}":
+		return 32
+	if {_mob} is "{@Evoker}":
+		return 34
+	if {_mob} is "{@Vex}":
+		return 35
+	if {_mob} is "{@Vindicator}":
+		return 36
+	if {_mob} is "{@Illusioner}":
+		return 37
+	if {_mob} is "{@Creeper}":
+		return 50
+	if {_mob} is "{@Skeleton}":
+		return 51
+	if {_mob} is "{@Spider}":
+		return 52
+	if {_mob} is "{@Giant}":
+		return 53
+	if {_mob} is "{@Zombie}":
+		return 54
+	if {_mob} is "{@Slime}":
+		return 55
+	if {_mob} is "{@Ghast}":
+		return 56
+	if {_mob} is "{@Zombie_Pigman}":
+		return 57
+	if {_mob} is "{@Enderman}":
+		return 58
+	if {_mob} is "{@Cave_Spider}":
+		return 59
+	if {_mob} is "{@SilverFish}":
+		return 60
+	if {_mob} is "{@Blaze}":
+		return 61
+	if {_mob} is "{@Magma_Cube}":
+		return 62
+	if {_mob} is "{@Ender_Dragon}":
+		return 63
+	if {_mob} is "{@Wither}":
+		return 64
+	if {_mob} is "{@Bat}":
+		return 65
+	if {_mob} is "{@Witch}":
+		return 66
+	if {_mob} is "{@Endermite}":
+		return 67
+	if {_mob} is "{@Guardian}":
+		return 68
+	if {_mob} is "{@Shulker}":
+		return 69
+	if {_mob} is "{@Pig}":
+		return 90
+	if {_mob} is "{@Sheep}":
+		return 91
+	if {_mob} is "{@Cow}":
+		return 92
+	if {_mob} is "{@Chicken}":
+		return 93
+	if {_mob} is "{@Squid}":
+		return 94
+	if {_mob} is "{@Wolf}":
+		return 95
+	if {_mob} is "{@Mooshroom}":
+		return 96
+	if {_mob} is "{@Snow_Golem}":
+		return 97
+	if {_mob} is "{@Ocelot}":
+		return 98
+	if {_mob} is "{@Iron_Golem}":
+		return 99
+	if {_mob} is "{@Horse}":
+		return 100
+	if {_mob} is "{@Rabbit}":
+		return 101
+	if {_mob} is "{@Polar_Bear}":
+		return 102
+	if {_mob} is "{@Llama}":
+		return 103
+	if {_mob} is "{@Parrot}":
+		return 105
+	if {_mob} is "{@Villager}":
+		return 120
+	return -1
+function SkinReload(p: player): #Mandatory only for 1.15 and 1.16
+	{DM::MCVersion} >= 15 #Sending already known infos doesn't work, so I send 2 almost indentical packets
+	set {_packetsettings} to new play_client_settings packet
+	set string field 0 of {_packetsettings} to {DM::HiddenPSettings::%{_p}%::Lang}
+	set int field 0 of {_packetsettings} to {DM::HiddenPSettings::%{_p}%::View}
+	set chatvisibility field 0 of {_packetsettings} to {DM::HiddenPSettings::%{_p}%::ChatVisibility}
+	set boolean field 0 of {_packetsettings} to {DM::HiddenPSettings::%{_p}%::ChatColor}
+	set int field 1 of {_packetsettings} to {DM::HiddenPSettings::%{_p}%::Skin}-1 #Remove the player's cape and force the reactualisation
+	set object field 5 of {_packetsettings} to {DM::HiddenPSettings::%{_p}%::Hand}
+	receive packet {_packetsettings} from {_p}
+	wait 1 tick
+	set {_packetsettings2} to new play_client_settings packet
+	set string field 0 of {_packetsettings2} to {DM::HiddenPSettings::%{_p}%::Lang}
+	set int field 0 of {_packetsettings2} to {DM::HiddenPSettings::%{_p}%::View}
+	set chatvisibility field 0 of {_packetsettings2} to {DM::HiddenPSettings::%{_p}%::ChatVisibility}
+	set boolean field 0 of {_packetsettings2} to {DM::HiddenPSettings::%{_p}%::ChatColor}
+	set int field 1 of {_packetsettings2} to {DM::HiddenPSettings::%{_p}%::Skin}+1 #Add the cape back
+	set object field 5 of {_packetsettings2} to {DM::HiddenPSettings::%{_p}%::Hand}
+	receive packet {_packetsettings2} from {_p}
+function UpdateHand16(p: player): #Only for 1.16, since the packet changed and I have no clue how to get the field of the equipment packet to work
+	{DM::MCVersion} >= 16
+	if {DM::ItemSlot::%{_p}%} is not set:
+		send "&6DisguiseMe &b> &6! The function UpdateHand was called, but the slot is not set. This is an anti-kick protection, hence %{_p}%'s hand item wasn't reload!" to console
+		send "&6DisguiseMe &b> &3If you get this message again, even after you disconnect and reconnect, please contact me on Discord, Phe0X##5907 and tell me this number: &4##001!" to console
+		stop
+	set {_packet} to new play_client_held_item_slot packet
+	if {DM::ItemSlot::%{_p}%} is 0: #Otherwise you get kicked for Hacking by Spigot
+		set {_slot1} to 8
+		set {_slot2} to 0
+	else:
+		set {_slot1} to {DM::ItemSlot::%{_p}%} - 1
+		set {_slot2} to {DM::ItemSlot::%{_p}%}
+	set int field 0 of {_packet} to {_slot1}
+	receive packet {_packet} from {_p}
+	wait 1 tick
+	set {_packet} to new play_client_held_item_slot packet
+	set int field 0 of {_packet} to {_slot2}
+	receive packet {_packet} from {_p}
+command /disguise [<text>] [<player>]:
+	permission: self.disguise
+	permission message: &cYou don't have the permission to execute this command
+	usage: &4Syntax &b» &3/disguise help to show the help
+	trigger:
+		if arg 1 is not set:
+			send "&6DisguiseMe &b» &cInvalid syntax !"
+			send "&3Help &7» &b/disguise help"
+			stop
+		if arg 1 is "help":
+			send "&6DisguiseMe &b» &2Version 1.1"
+			send "&6DisguiseMe &b» &aCommands"
+			send "&3List of mobs &7» &b/disguise list"
+			send "&3Disguise yourself &7» &b/disguise <Mob>"
+			if player has permission "other.disguise":
+				send "&3Disguise a player &7» &b/disguise <Mob> <player>"
+			if player has permission "self.undisguise":
+				send "&3Remove your disguise &7» &b/undisguise"
+				if player has permission "other.undisguise":
+					send "&3Remove a player's disguise &7» &b/undisguise <player>"
+			stop
+		if arg 1 is "list":
+			send "&6DisguiseMe &b» &3Mob list:"
+			if {DM::MCVersion} is 8:
+				send "&dPeaceful &f» &7{@ArmorStand}, {@Bat}, {@Chicken}, {@Cow}, {@Horse}, {@Mooshroom}, {@Ocelot}, {@Pig}, {@Rabbit}, {@Sheep}, {@Snow_Golem}, {@Squid}, {@Villager}, {@Iron_Golem}, {@Wolf}"
+				send "&dAggressive &f» &7{@Blaze}, {@Cave_Spider}, {@Creeper}, {@Ender_Dragon}, {@Enderman}, {@Endermite}, {@Ghast}, {@Giant}, {@Guardian}, {@Magma_Cube}, {@Zombie_Pigman}, {@SilverFish}, {@Skeleton}, {@Slime}, {@Spider}, {@Witch}, {@Wither}, {@Zombie}"
+			else if {DM::MCVersion} is 9:
+				send "&dPeaceful &f» &7{@ArmorStand}, {@Bat}, {@Chicken}, {@Cow}, {@Horse}, {@Mooshroom}, {@Ocelot}, {@Pig}, {@Rabbit}, {@Sheep}, {@Snow_Golem}, {@Squid}, {@Villager}, {@Iron_Golem}, {@Wolf}"
+				send "&dAggressive &f» &7{@Blaze}, {@Cave_Spider}, {@Creeper}, {@Ender_Dragon}, {@Enderman}, {@Endermite}, {@Ghast}, {@Giant}, {@Guardian}, {@Magma_Cube}, {@Zombie_Pigman}, {@Shulker}, {@SilverFish}, {@Skeleton}, {@Slime}, {@Spider}, {@Witch}, {@Wither}, {@Zombie}"
+			else if {DM::MCVersion} is 10:
+				send "&dPeaceful &f» &7{@ArmorStand}, {@Bat}, {@Chicken}, {@Cow}, {@Horse}, {@Mooshroom}, {@Ocelot}, {@Pig}, {@Polar_Bear}, {@Rabbit}, {@Sheep}, {@Snow_Golem}, {@Squid}, {@Villager}, {@Iron_Golem}, {@Wolf}"
+				send "&dAggressive &f» &7{@Blaze}, {@Cave_Spider}, {@Creeper}, {@Ender_Dragon}, {@Enderman}, {@Endermite}, {@Ghast}, {@Giant}, {@Guardian}, {@Magma_Cube}, {@Zombie_Pigman}, {@Shulker}, {@SilverFish}, {@Skeleton}, {@Slime}, {@Spider}, {@Witch}, {@Wither}, {@Zombie}"
+			else if {DM::MCVersion} is 11:
+				send "&dPeaceful &f» &7{@ArmorStand}, {@Bat}, {@Chicken}, {@Cow}, {@Donkey}, {@Horse}, {@Mule}, {@Mooshroom}, {@Ocelot}, {@Pig}, {@Polar_Bear}, {@Rabbit}, {@Sheep}, {@Skeleton_Horse}, {@Snow_Golem}, {@Squid}, {@Villager}, {@Iron_Golem}, {@Wolf}, {@Zombie_Horse}"
+				send "&dAggressive &f» &7{@Blaze}, {@Cave_Spider}, {@Creeper}, {@Elder_Guardian}, {@Ender_Dragon}, {@Enderman}, {@Endermite}, {@Evoker}, {@Ghast}, {@Giant}, {@Guardian}, {@Husk}, {@Magma_Cube}, {@Zombie_Pigman}, {@Shulker}, {@SilverFish}, {@Skeleton}, {@Slime}, {@Spider}, {@Stray}, {@Vex}, {@Vindicator}, {@Witch}, {@Wither}, {@Wither_Skeleton}, {@Zombie}, {@Zombie_Villager}"
+			else if {DM::MCVersion} is 12:
+				send "&dPeaceful &f» &7{@ArmorStand}, {@Bat}, {@Chicken}, {@Cow}, {@Donkey}, {@Horse}, {@Mule}, {@Mooshroom}, {@Ocelot}, {@Parrot}, {@Pig}, {@Polar_Bear}, {@Rabbit}, {@Sheep}, {@Skeleton_Horse}, {@Snow_Golem}, {@Squid}, {@Villager}, {@Iron_Golem}, {@Wolf}, {@Zombie_Horse}"
+				send "&dAggressive &f» &7{@Blaze}, {@Cave_Spider}, {@Creeper}, {@Elder_Guardian}, {@Ender_Dragon}, {@Enderman}, {@Endermite}, {@Evoker}, {@Ghast}, {@Giant}, {@Guardian}, {@Husk}, {@Illusioner}, {@Magma_Cube}, {@Zombie_Pigman}, {@Shulker}, {@SilverFish}, {@Skeleton}, {@Slime}, {@Spider}, {@Stray}, {@Vex}, {@Vindicator}, {@Witch}, {@Wither}, {@Wither_Skeleton}, {@Zombie}, {@Zombie_Villager}"
+			else if {DM::MCVersion} is 13:
+				send "&dPeaceful &f» &7{@ArmorStand}, {@Bat}, {@Chicken}, {@Cod}, {@Cow}, {@Donkey}, {@Dolphin}, {@Horse}, {@Llama}, {@Mule}, {@Mooshroom}, {@Ocelot}, {@Parrot}, {@Pig}, {@PufferFish}, {@Polar_Bear}, {@Rabbit}, {@Salmon}, {@Sheep}, {@Skeleton_Horse}, {@Snow_Golem}, {@Squid}, {@Tropical_Fish}, {@Turtle}, {@Villager}, {@Iron_Golem}, {@Wolf}, {@Zombie_Horse}"
+				send "&dAggressive &f» &7{@Blaze}, {@Cave_Spider}, {@Creeper}, {@Drowned}, {@Elder_Guardian}, {@Ender_Dragon}, {@Enderman}, {@Endermite}, {@Evoker}, {@Ghast}, {@Giant}, {@Guardian}, {@Husk}, {@Illusioner}, {@Magma_Cube}, {@Zombie_Pigman}, {@Shulker}, {@SilverFish}, {@Skeleton}, {@Slime}, {@Spider}, {@Stray}, {@Vex}, {@Vindicator}, {@Witch}, {@Wither}, {@Wither_Skeleton}, {@Zombie}, {@Zombie_Villager}, {@Phantom}"
+			else if {DM::MCVersion} is 14:
+				send "&dPeaceful &f» &7{@ArmorStand}, {@Bat}, {@Cat}, {@Chicken}, {@Cod}, {@Cow}, {@Donkey}, {@Dolphin}, {@Fox}, {@Horse}, {@Llama}, {@Mule}, {@Mooshroom}, {@Ocelot}, {@Panda}, {@Parrot}, {@Pig}, {@PufferFish}, {@Polar_Bear}, {@Rabbit}, {@Salmon}, {@Sheep}, {@Skeleton_Horse}, {@Snow_Golem}, {@Squid}, {@Trader_Llama}, {@Tropical_Fish}, {@Turtle}, {@Villager}, {@Iron_Golem}, {@Wandering_Trader}, {@Wolf}, {@Zombie_Horse}"
+				send "&dAggressive &f» &7{@Blaze}, {@Cave_Spider}, {@Creeper}, {@Drowned}, {@Elder_Guardian}, {@Ender_Dragon}, {@Enderman}, {@Endermite}, {@Evoker}, {@Ghast}, {@Giant}, {@Guardian}, {@Husk}, {@Illusioner}, {@Magma_Cube}, {@Zombie_Pigman}, {@Shulker}, {@SilverFish}, {@Skeleton}, {@Slime}, {@Spider}, {@Stray}, {@Vex}, {@Vindicator}, {@Pillager}, {@Witch}, {@Wither}, {@Wither_Skeleton}, {@Zombie}, {@Zombie_Villager}, {@Phantom}, {@Ravager}"
+			else if {DM::MCVersion} is 15:
+				send "&dPeaceful &f» &7{@ArmorStand}, {@Bat}, {@Bee}, {@Cat}, {@Chicken}, {@Cod}, {@Cow}, {@Donkey}, {@Dolphin}, {@Fox}, {@Horse}, {@Llama}, {@Mule}, {@Mooshroom}, {@Ocelot}, {@Panda}, {@Parrot}, {@Pig}, {@PufferFish}, {@Polar_Bear}, {@Rabbit}, {@Salmon}, {@Sheep}, {@Skeleton_Horse}, {@Snow_Golem}, {@Squid}, {@Trader_Llama}, {@Tropical_Fish}, {@Turtle}, {@Villager}, {@Iron_Golem}, {@Wandering_Trader}, {@Wolf}, {@Zombie_Horse}"
+				send "&dAggressive &f» &7{@Blaze}, {@Cave_Spider}, {@Creeper}, {@Drowned}, {@Elder_Guardian}, {@Ender_Dragon}, {@Enderman}, {@Endermite}, {@Evoker}, {@Ghast}, {@Giant}, {@Guardian}, {@Husk}, {@Illusioner}, {@Magma_Cube}, {@Zombie_Pigman}, {@Shulker}, {@SilverFish}, {@Skeleton}, {@Slime}, {@Spider}, {@Stray}, {@Vex}, {@Vindicator}, {@Pillager}, {@Witch}, {@Wither}, {@Wither_Skeleton}, {@Zombie}, {@Zombie_Villager}, {@Phantom}, {@Ravager}"
+			else if {DM::MCVersion} is 16:
+				send "&dPeaceful &f» &7{@ArmorStand}, {@Bat}, {@Bee}, {@Cat}, {@Chicken}, {@Cod}, {@Cow}, {@Donkey}, {@Dolphin}, {@Fox}, {@Horse}, {@Llama}, {@Mule}, {@Mooshroom}, {@Ocelot}, {@Panda}, {@Parrot}, {@Pig}, {@PufferFish}, {@Polar_Bear}, {@Rabbit}, {@Salmon}, {@Sheep}, {@Skeleton_Horse}, {@Snow_Golem}, {@Squid}, {@Strider}, {@Trader_Llama}, {@Tropical_Fish}, {@Turtle}, {@Villager}, {@Iron_Golem}, {@Wandering_Trader}, {@Wolf}, {@Zombie_Horse}"
+				send "&dAggressive &f» &7{@Blaze}, {@Cave_Spider}, {@Creeper}, {@Drowned}, {@Elder_Guardian}, {@Ender_Dragon}, {@Enderman}, {@Endermite}, {@Evoker}, {@Ghast}, {@Giant}, {@Guardian}, , {@Hoglin}, {@Husk}, {@Illusioner}, {@Magma_Cube}, {@Phantom}, {@Ravager}, {@Shulker}, {@SilverFish}, {@Skeleton}, {@Slime}, {@Spider}, {@Stray}, {@Vex}, {@Vindicator}, {@Piglin}, {@Pillager}, {@Witch}, {@Wither}, {@Wither_Skeleton}, {@Zombie}, {@Zombie_Villager}, {@Zoglin}, {@Zombified_Piglin}"
+			else:
+				send "&6DisguiseMe &b» &cYour version is not supported, so here is the 1.16 list" 
+				send "&dPeaceful &f» &7{@ArmorStand}, {@Bat}, {@Bee}, {@Cat}, {@Chicken}, {@Cod}, {@Cow}, {@Donkey}, {@Dolphin}, {@Fox}, {@Horse}, {@Llama}, {@Mule}, {@Mooshroom}, {@Ocelot}, {@Panda}, {@Parrot}, {@Pig}, {@PufferFish}, {@Polar_Bear}, {@Rabbit}, {@Salmon}, {@Sheep}, {@Skeleton_Horse}, {@Snow_Golem}, {@Squid}, {@Strider}, {@Trader_Llama}, {@Tropical_Fish}, {@Turtle}, {@Villager}, {@Iron_Golem}, {@Wandering_Trader}, {@Wolf}, {@Zombie_Horse}"
+				send "&dAggressive &f» &7{@Blaze}, {@Cave_Spider}, {@Creeper}, {@Drowned}, {@Elder_Guardian}, {@Ender_Dragon}, {@Enderman}, {@Endermite}, {@Evoker}, {@Ghast}, {@Giant}, {@Guardian}, , {@Hoglin}, {@Husk}, {@Illusioner}, {@Magma_Cube}, {@Phantom}, {@Ravager}, {@Shulker}, {@SilverFish}, {@Skeleton}, {@Slime}, {@Spider}, {@Stray}, {@Vex}, {@Vindicator}, {@Piglin}, {@Pillager}, {@Witch}, {@Wither}, {@Wither_Skeleton}, {@Zombie}, {@Zombie_Villager}, {@Zoglin}, {@Zombified_Piglin}"
+			stop
+		set {_id} to MobToId(arg-1)
+		if {DM::MCVersion} <= 12:
+			set {_id} to MobToId12(arg-1)
+		if {DM::MCVersion} >= 16: #1.17 =)
+			set {_id} to MobToId16(arg-1)
+		if {_id} is -1:
+			send "&6DisguiseMe &b» &cThis mob doesn't exist !"
+			send "&3Mob list &7» &b/disguise list"
+			stop
+		if {_id} is -5:
+			send "&6DisguiseMe &b» &cThis mob is not supported or doesn't exist in your version ! &d(1.%{DM::MCVersion}%&d)"
+			send "&3Mob list &7» &b/disguise list"
+			stop
+		if {_id} is -6:
+			send "&6DisguiseMe &b» &cThis mob is not supported or doesn't exist in your version ! &d(1.%{DM::MCVersion}%&d)"
+			send "&6DisguiseMe &b» &eThis mob was deleted in 1.16. {@Zombie_Pigman} were replaced by {@Piglin} !"
+			send "&3Mob list &7» &b/disguise list"
+			stop
+		if {DM::MCVersion} is 15:
+			if arg-1 is not "{@ArmorStand}" or "{@Bat}" or "{@Bee}":
+				add 1 to {_id}
+		if {DM::MCVersion} is 13:#1.13 has a weird logic but stilm follows the same pattern as 1.14/1.15 for type of mobs
+			if arg-1 is "{@ArmorStand}" or "{@Bat}" or "{@Blaze}":
+				set {_id} to {_id}
+			else if arg-1 is "{@Cave_Spider}" or "{@Chicken}" or "{@Cod}" or "{@Cow}" or "{@Cow}" or "{@Creeper}" or "{@Donkey}" or "{@Dolphin}" or "{@Drowned}" or "{@Elder_Guardian}" or "{@Ender_Dragon}" or "{@Enderman}" or "{@Endermite}" or "{@Evoker}" or "{@Magma_Cube}":
+				remove 1 from {_id}
+			else if arg-1 is "{@Ghast}" or "{@Giant}" or "{@Guardian}" or "{@Horse}" or "{@Husk}" or "{@Illusioner}" or "{@Llama}" or "{@Mule}" or "{@Mooshroom}" or "{@Ocelot}":
+				remove 2 from {_id}
+			else if arg-1 is "{@Parrot}" or "{@Pig}" or "{@PufferFish}" or "{@Zombie_Pigman}" or "{@Polar_Bear}" or "{@Rabbit}" or "{@Salmon}" or "{@Sheep}" or "{@Shulker}" or "{@SilverFish}" or "{@Skeleton}" or "{@Skeleton_Horse}" or "{@Slime}" or "{@Snow_Golem}" or "{@Spider}" or "{@Squid}" or "{@Stray}":
+				remove 3 from {_id}
+			else if arg-1 is "{@Tropical_Fish}" or "{@Turtle}":
+				remove 4 from {_id}
+			else if arg-1 is "{@Vex}" or "{@Villager}" or "{@Iron_Golem}" or "{@Vindicator}":
+				remove 5 from {_id}
+			else:
+				remove 7 from {_id}
+		if arg 2 is not set:
+			set {_exception} to player
+		else:
+			if player has permission "other.disguise":
+				set {_exception} to arg-2
+			else:
+				send "&6DisguiseMe &b» &cYou don't have the permission to disguise another player"
+				send "&4Syntax &b» &3/disguise <Mob>"
+				stop
+		if {DM::MCVersion} is not between 8 and 16: #1.7 or below, 1.17 or above
+			send "&6DisguiseMe &b» &4⚠This skript was made for all versions between 1.8 and 1.16, you may experience bugs !⚠" 
+		if arg-1 is "{@Villager}":
+			if {DM::MCVersion} is 9 or 10:
+				send "&6DisguiseMe &c» &4⚠&dIn this version, a player right clicking on a {@Villager} disguise will crash ! &e(Trying to open an inventory that doesn't exist)"
+			if {DM::MCVersion} is 8:
+				send "&6DisguiseMe &c» &4⚠&dIn this version, a player right clicking on a {@Villager} disguise will make the disguised player invisible for him !"
+		if arg-1 is "{@Shulker}":
+			send "&6DisguiseMe &c» &4⚠&dBecause of the way minecraft works, &4players won't see the disguise move &d(shulkers can't move in vanilla)"
+		if arg-1 is "{@Ender_Dragon}":
+			send "&6DisguiseMe &c» &4⚠&dBecause of the way minecraft works, &4players will see the disguise looking in the wrong direction &d(I have a fix but it creates too much lag)"
+		set {_packet} to new play_server_spawn_entity_living packet
+		set {_eId} to {_exception}.getEntityId()
+		set {_uuid} to {_exception}'s uuid
+		set {_xloc} to x location of {_exception}
+		set {_yloc} to y location of {_exception}
+		set {_zloc} to z location of {_exception}
+		set {_pitch} to ({_exception}'s location).getPitch()
+		set {_yaw} to ({_exception}'s location).getYaw()
+		set {_fYaw} to {_yaw}*256/360 #Yaws & pitchs are not the one shown on the F3 menu or by Skript/Spigot, they are "compressed"
+		set {_fPitch} to {_pitch}*256/360
+		if {DM::MCVersion} >= 9: #The packet changed in 1.9
+			set int pnum 0 of {_packet} to {_eId} #EID
+			set uuid field 0 of {_packet} to "%{_uuid}%" #E UUID
+			set int pnum 1 of {_packet} to {_id} #Type of mob
+			set double pnum 0 of {_packet} to {_xloc} #X location
+			set double pnum 1 of {_packet} to {_yloc} #y location
+			set double pnum 2 of {_packet} to {_zloc} #Z location
+			set int pnum 2 of {_packet} to 0 #X velocity
+			set int pnum 3 of {_packet} to 0 #Y Velocity
+			set int pnum 4 of {_packet} to 0 #Z Velocity
+			set byte pnum 0 of {_packet} to {_fYaw} #arg-1's yaw
+			set byte pnum 1 of {_packet} to {_fPitch} #pitch
+			set byte pnum 2 of {_packet} to {_fYaw} #yaw again (for the body I think)
+		if {DM::MCVersion} <= 8: 
+			set int pnum 0 of {_packet} to {_eId} 
+			set int pnum 1 of {_packet} to {_id} 
+			set int pnum 2 of {_packet} to {_xloc}*32 #Must be multiplied by 32 in 1.8, since it's an int
+			set int pnum 3 of {_packet} to {_yloc}*32 
+			set int pnum 4 of {_packet} to {_zloc}*32 
+			set int pnum 5 of {_packet} to 0 
+			set int pnum 6 of {_packet} to 0 
+			set int pnum 7 of {_packet} to 0 
+			set byte pnum 0 of {_packet} to {_fYaw} 
+			set byte pnum 1 of {_packet} to {_fPitch} 
+			set byte pnum 2 of {_packet} to {_fYaw} 	
+		if {@Name} is true:
+			if {DM::MCVersion} = 9 or 10 or 11 or 12:
+				set watched string 2 of data watcher field 0 of {_packet} to "%{_exception}%" #Mojang removed this field in 1.14, idk why (that's dumb btw)
+			else if {DM::MCVersion} is 13:
+				set {_name} to Optional.of(new ChatComponentText("%{_exception}%"))
+				set {_WDW} to new WrappedDataWatcher() #Must be done with sk mirror because ThatPacketAddon doesn't accept optional chat (Thanks Rush²Fer)
+				set {_Serializer} to DWReg.getChatComponentSerializer(true) 
+				set {_Dw} to new DWObject(2 and {_Serializer})
+				{_WDW}.setObject({_Dw} and {_name})		
+				set data watcher field 0 of {_packet} to {_WDW}
+			else if {DM::MCVersion} <= 8:
+				set {_name} to "%{_exception}%"
+				set {_WDW} to new WrappedDataWatcher() #Watched strings don't work in 1.8 (idk why), so I use protocollib 
+				{_WDW}.setObject(2 and {_name})		
+				set data watcher field 0 of {_packet} to {_WDW}
+			else: #1.14 and above need a different packet to show the name above the disguise
+				set {_packetMeta} to new play_server_entity_metadata packet
+				set int pnum 0 of {_packetMeta} to {_exception}.getEntityId() #EID
+				set {_name} to Optional.of(new ChatComponentText("%{_exception}%"))
+				set {_WDW} to new WrappedDataWatcher() #Same as above
+				set {_Serializer} to DWReg.getChatComponentSerializer(true)
+				set {_Dw} to new DWObject(2 and {_Serializer})
+				{_WDW}.setObject({_Dw} and {_name})		
+				set watchable collection field 0 of {_packetMeta} to {_WDW}
+		if {@UpdateHand} is true:
+			{DM::MCVersion} <= 15
+			set {_packetHand} to new play_server_entity_equipment packet
+			set int field 0 of {_packetHand} to {_exception}.getEntityId()
+			if {DM::MCVersion} is 8:
+				set int field 1 of {_packetHand} to 0
+			if {DM::MCVersion} > 8:
+				set itemslot field 0 of {_packetHand} to "mainhand"
+			set itemstack field 0 of {_packetHand} to {_exception}'s tool
+		set {_playerlist::*} to all players in radius 50 around {_exception}
+		remove {_exception} from {_playerlist::*}
+		#Show the disguise to all nearby players, without looping (probably faster to do it this way, since otherwise I'd have to loop again)
+		send packet {_packet} to {_playerlist::*}
+		send packet {_packetMeta} to {_playerlist::*}
+		if {DM::MCVersion} is 8:
+			wait 3 tick
+		send packet {_packetHand} to {_playerlist::*}
+		set {DM::HIDDENPlayer::%{_uuid}%} to true
+		set {DM::HIDDENUUID::%{_eId}%} to {_uuid}
+		set {DM::HIDDENId::%{_eId}%} to {_exception}
+		set {DM::HIDDENDisguise::%{_eId}%} to {_id}
+		set {DM::HIDDENForAll::%{_eId}%} to true
+		if arg-2 is set:
+			send "&6DisguiseMe &b» &3%{_exception}% is now disguised as &d%arg 1% &afor everyone !" 
+		if arg-2 is not set:
+			send "&6DisguiseMe &b» &3You are now disguised as &d%arg 1% &afor everyone !" 
+		if {@UpdateStuffExp} is true:
+			{DM::MCVersion} <= 12
+			hide {_exception} from {_playerlist::*}
+			reveal {_exception} to {_playerlist::*}
+		if {@UpdateHand} is true:
+			{DM::MCVersion} >= 16
+			UpdateHand16({_exception})
+on quit:
+	if {DM::HIDDENPlayer::%uuid of player%} is true:
+		set {DM::LeftHiddenDisguise::%uuid of player%} to {DM::HIDDENDisguise::%player.getEntityId()%}
+		if {DM::HIDDENForAll::%player.getEntityId()%} is true:
+			set {DM::LeftHiddenForAll::%uuid of player%} to true
+		if {DM::HIDDENForAll::%player.getEntityId()%} is false:
+			set {DM::LeftHiddenForAll::%uuid of player%} to false
+			set {DM::LeftHiddenList::%uuid of player%::*} to {DM::HiddenList::%player.getEntityId()%::*}
+	clear {DM::HIDDENPlayer::%uuid of player%}
+	clear {DM::HIDDENUUID::%player.getEntityId()%}
+	clear {DM::HIDDENId::%player.getEntityId()%}
+	clear {DM::HIDDENDisguise::%player.getEntityId()%}
+	clear {DM::HIDDENForAll::%player.getEntityId()%}
+	clear {DM::HiddenList::%player.getEntityId()%::*}
+	clear {DM::HiddenPSettings::%player%::*}
+	clear {DM::ItemSlot::%player%}
+on join:
+	set {DM::IdToPlayer::%player.getEntityId()%} to player
+	set {DM::LastJoin::%player%} to now
+	if {DM::LeftHiddenDisguise::%uuid of player%} is set:
+		set {DM::HIDDENPlayer::%uuid of player%} to true
+		set {DM::HIDDENUUID::%player.getEntityId()%} to UUID of player
+		set {DM::HIDDENId::%player.getEntityId()%} to player
+		set {DM::HIDDENDisguise::%player.getEntityId()%} to {DM::LeftHiddenDisguise::%uuid of player%}
+		if {DM::LeftHiddenForAll::%uuid of player%} is true:
+			set {DM::HIDDENForAll::%player.getEntityId()%} to true
+		if {DM::HIDDENForAll::%player.getEntityId()%} is false:
+			set {DM::HiddenList::%player.getEntityId()%::*} to {DM::LeftHiddenList::%uuid of player%::*}
+		{DM::MCVersion} is 9 or 10 or 11
+		wait {@JoinDelay} #Mandatory, otherwise players in 1.9, 1.10 or 1.11 crash
+		set {_exception} to player
+		set {_eId} to {_exception}.getEntityId()
+		set {_uuid} to {_exception}'s uuid
+		set {_xloc} to x location of {_exception}
+		set {_yloc} to y location of {_exception}
+		set {_zloc} to z location of {_exception}
+		set {_pitch} to ({_exception}'s location).getPitch()
+		set {_yaw} to ({_exception}'s location).getYaw()
+		set {_fYaw} to {_yaw}*256/360
+		set {_fPitch} to {_pitch}*256/360
+		set {_packet} to new play_server_spawn_entity_living packet #Same as the disguise command
+		set int pnum 0 of {_packet} to {_eId} 
+		set uuid field 0 of {_packet} to "%{_uuid}%" 
+		set int pnum 1 of {_packet} to {DM::HIDDENDisguise::%player.getEntityId()%} 
+		set double pnum 0 of {_packet} to {_xloc}
+		set double pnum 1 of {_packet} to {_yloc}
+		set double pnum 2 of {_packet} to {_zloc}
+		set int pnum 2 of {_packet} to 0
+		set int pnum 3 of {_packet} to 0
+		set int pnum 4 of {_packet} to 0
+		set byte pnum 0 of {_packet} to {_fYaw} 
+		set byte pnum 1 of {_packet} to {_fPitch} 
+		set byte pnum 2 of {_packet} to {_fYaw}
+		if {@Name} is true:
+			set watched string 2 of data watcher field 0 of {_packet} to "%{_exception}%"
+		if {DM::HIDDENForAll::%player.getEntityId()%} is true:
+			loop all players in radius 50 around {_exception}:
+				loop-player is not {_exception}
+				send packet {_packet} to loop-player
+		if {DM::HIDDENForAll::%player.getEntityId()%} is true:
+			loop all players in radius 50 around {_exception}: 
+				{DM::HiddenList::%player.getEntityId()%::*} contains loop-player
+				loop-player is not {_exception}
+				send packet {_packet} to loop-player
+	clear {DM::LeftHiddenDisguise::%uuid of player%}
+	clear {DM::LeftHiddenForAll::%uuid of player%}
+	clear {DM::LeftHiddenList::%uuid of player%::*}
+command /undisguise [<offline player>]:
+	permission: self.undisguise
+	permission message: &cYou don't have the permission to execute this command
+	usage: &4Syntaxe &b» &3/undisguise [<player>]
+	trigger:
+		set {_undisguise} to player
+		if arg-1 is set:
+			if player doesn't have permission "other.undisguise":
+				send "&6DisguiseMe &b» &cYou don't have the permission to remove a player's disguise!"
+				send "&4Syntax &b» &3/undisguise"
+				stop
+			if arg-1 is offline:
+				if {DM::LeftHiddenDisguise::%uuid of arg-1%} is set:
+					clear {DM::LeftHiddenDisguise::%uuid of arg-1%}
+					clear {DM::LeftHiddenForAll::%uuid of arg-1%}
+					clear {DM::LeftHiddenList::%uuid of arg-1%::*}
+					send "&6DisguiseMe &b» &3%arg 1%&a &cwon't be &adisguised the next time he joins!" 
+					stop
+				send "&6DisguiseMe &b» &3%arg 1% &cwas not disguised !" 
+				stop
+			set {_undisguise} to arg-1
+		set {_uuid} to uuid of {_undisguise} #Skript gives an error if I try to do it in 1 line
+		set {_EId} to {_undisguise}.getEntityId() #Same
+		if {DM::HIDDENPlayer::%{_uuid}%} is true:
+			clear {DM::HIDDENPlayer::%{_uuid}%}
+			clear {DM::HIDDENUUID::%{_EId}%}
+			clear {DM::HIDDENId::%{_EId}%}
+			clear {DM::HIDDENDisguise::%{_EId}%}
+			clear {DM::HiddenList::%{_EId}%::*}
+			if arg-1 is not set:
+				send "&6DisguiseMe &b» &3You&a are &cnot &adisguised &canymore !"
+			if arg-1 is set:
+				send "&6DisguiseMe &b» &3%{_undisguise}%&a is &cnot &adisguised &canymore !"
+			if {DM::MCVersion} >= 9: #Useless in 1.8
+				{DM::MCVersion} < 16
+				{@UpdateHand} is true
+				set {_packetHand} to new play_server_entity_equipment packet #Maybe not useful for all versions
+				set int field 0 of {_packetHand} to {_EId}
+				if {DM::MCVersion} is 8:
+					set int field 1 of {_packetHand} to 0
+				if {DM::MCVersion} > 8:
+					set itemslot field 0 of {_packetHand} to "mainhand"
+				set itemstack field 0 of {_packetHand} to {_undisguise}'s tool
+			if {@UpdateHead} is true:
+				set {_packetHead} to new play_server_entity_head_rotation packet
+				set int field 0 of {_packetHead} to {_undisguise}.getEntityId()
+				set {_yaw} to ({_undisguise}'s location).getYaw()
+				set {_fYaw} to round({_yaw}*256/360) 
+				set byte field 0 of {_packetHead} to {_fyaw}
+			set {_playerlist::*} to all players in radius 50 around {_undisguise} #Allows me to have a wait without looping again
+			remove {_undisguise} from {_playerlist::*}
+			hide {_undisguise} from {_playerlist::*} #Send a play_server_named_entity_spawn packet by default, and I don't have anything to do there lmao
+			reveal {_undisguise} to {_playerlist::*}
+			if {DM::MCVersion} >= 9:
+				wait 1 tick
+			send packet {_packetHand} to {_playerlist::*}
+			send packet {_packetHead} to {_playerlist::*}
+		else:
+			if arg-1 is not set:
+				send "&6DisguiseMe &b» &3You &care not disguised !"
+			if arg-1 is set:
+				send "&6DisguiseMe &b» &3%arg 1% &cis not disguised !" 
+			if player has permission "other.undisguise":
+				send "&3Remove a player's disguise &7» &b/undisguise <player>"
+			send "&3Remove your disguise &7» &b/undisguise"
+on packet event play_server_named_entity_spawn: #Show the disguise when a player comes into visible range
+	if {DM::HIDDENid::%int pnum 0 of event-packet%} is set:
+		if {DM::HIDDENForAll::%int pnum 0 of event-packet%} is false:
+			{DM::HiddenList::%int pnum 0 of event-packet%::*} doesn't contain player:
+				stop
+		if {DM::MCVersion} is 9 or 10 or 11:
+			if difference between {DM::LastJoin::%{DM::HIDDENId::%int pnum 0 of event-packet%}%} and now < 1 seconds: #Prevent nearby players from crashing in 1.9/10/11
+				stop
+		cancel event
+		set {_packet} to new play_server_spawn_entity_living packet
+		if {DM::MCVersion} >= 9:
+			set int pnum 0 of {_packet} to int pnum 0 of event-packet #EID
+			set uuid field 0 of {_packet} to "%{DM::HIDDENUUID::%int pnum 0 of event-packet%}%" 
+			set int pnum 1 of {_packet} to {DM::HIDDENDisguise::%int pnum 0 of event-packet%} 
+			set double pnum 0 of {_packet} to double pnum 0 of event-packet
+			set double pnum 1 of {_packet} to double pnum 1 of event-packet
+			set double pnum 2 of {_packet} to double pnum 2 of event-packet
+			set int pnum 2 of {_packet} to 0
+			set int pnum 3 of {_packet} to 0
+			set int pnum 4 of {_packet} to 0
+			set byte pnum 0 of {_packet} to byte pnum 0 of event-packet
+			set byte pnum 1 of {_packet} to byte pnum 1 of event-packet
+			set byte pnum 2 of {_packet} to byte pnum 0 of event-packet
+		if {DM::MCVersion} <= 8:
+			set int pnum 0 of {_packet} to int pnum 0 of event-packet #EID
+			set int pnum 1 of {_packet} to {DM::HIDDENDisguise::%int pnum 0 of event-packet%}  #Type of mob 
+			set int pnum 2 of {_packet} to int pnum 1 of event-packet #Pos X
+			set int pnum 3 of {_packet} to int pnum 2 of event-packet #Pos Y
+			set int pnum 4 of {_packet} to int pnum 3 of event-packet #Pos Z
+			set int pnum 5 of {_packet} to 0 #velocity x
+			set int pnum 6 of {_packet} to 0 #velocity y
+			set int pnum 7 of {_packet} to 0 #velocity z
+			set byte pnum 0 of {_packet} to {DM::HIDDENId::%int pnum 0 of event-packet%}'s yaw * 256 / 360 
+			set byte pnum 1 of {_packet} to {DM::HIDDENId::%int pnum 0 of event-packet%}'s pitch * 256 / 360
+			set byte pnum 2 of {_packet} to {DM::HIDDENId::%int pnum 0 of event-packet%}'s yaw * 256 / 360 	
+		if {@Name} is true:
+			if {DM::MCVersion} is 9 or 10 or 11 or 12:
+				set watched string 2 of data watcher field 0 of {_packet} to "%{DM::HIDDENId::%int pnum 0 of event-packet%}%"
+			else if {DM::MCVersion} <= 8:
+				set {_name} to "%{DM::HIDDENId::%int pnum 0 of event-packet%}%"
+				set {_WDW} to new WrappedDataWatcher() #So people actually read the comments I make, Kappa
+				{_WDW}.setObject(2 and {_name}) #Same as in the disguise command
+				set data watcher field 0 of {_packet} to {_WDW}
+			else if {DM::MCVersion} is 13:
+				set {_name} to Optional.of(new ChatComponentText("%{DM::HIDDENId::%int pnum 0 of event-packet%}%"))
+				set {_WDW} to new WrappedDataWatcher()
+				set {_Serializer} to DWReg.getChatComponentSerializer(true) 
+				set {_Dw} to new DWObject(2 and {_Serializer})
+				{_WDW}.setObject({_Dw} and {_name})		
+				set data watcher field 0 of {_packet} to {_WDW}
+			else: #1.14 -> 1.16+
+				set {_packetMeta} to new play_server_entity_metadata packet
+				set int pnum 0 of {_packetMeta} to int pnum 0 of event-packet
+				set {_name} to Optional.of(new ChatComponentText("%{DM::HIDDENId::%int pnum 0 of event-packet%}%"))
+				set {_WDW} to new WrappedDataWatcher()
+				set {_Serializer} to DWReg.getChatComponentSerializer(true)
+				set {_Dw} to new DWObject(2 and {_Serializer})
+				{_WDW}.setObject({_Dw} and {_name})		
+				set watchable collection field 0 of {_packetMeta} to {_WDW}
+		send packet {_packet} to player
+		send packet {_packetMeta} to player
+		if {@UpdateHand} is true:
+			if {DM::MCVersion} <= 15:
+				set {_packetHand} to new play_server_entity_equipment packet
+				set int field 0 of {_packetHand} to int pnum 0 of event-packet
+				if {DM::MCVersion} is 8:
+					set int field 1 of {_packetHand} to 0
+				if {DM::MCVersion} > 8:
+					set itemslot field 0 of {_packetHand} to "mainhand"
+				set itemstack field 0 of {_packetHand} to {DM::IdToPlayer::%int pnum 0 of event-packet%}'s tool
+				send packet {_packetHand} to player
+			else:
+				UpdateHand16({DM::IdToPlayer::%int pnum 0 of event-packet%})
+	else:
+		if {@UpdateHead} is true:
+			wait 1 tick
+			set {_packetHead} to new play_server_entity_head_rotation packet
+			set int field 0 of {_packetHead} to int field 0 of event-packet
+			set {_yaw} to ({DM::IdToPlayer::%int pnum 0 of event-packet%}'s location).getYaw()
+			set {_fYaw} to round({_yaw}*256/360) 
+			set byte field 0 of {_packetHead} to {_fYaw}
+			send packet {_packetHead} to player
+		if {@UpdateHand} is true:
+			if {DM::MCVersion} <= 15:
+				set {_packetHand} to new play_server_entity_equipment packet
+				set int field 0 of {_packetHand} to int pnum 0 of event-packet
+				if {DM::MCVersion} is 8:
+					set int field 1 of {_packetHand} to 0
+				if {DM::MCVersion} > 8:
+					set itemslot field 0 of {_packetHand} to "mainhand"
+				set itemstack field 0 of {_packetHand} to {DM::IdToPlayer::%int pnum 0 of event-packet%}'s tool
+				send packet {_packetHand} to player
+			else:
+				UpdateHand16({DM::IdToPlayer::%int pnum 0 of event-packet%})
+		if {@SkinReload} is true:
+			SkinReload({DM::IdToPlayer::%int pnum 0 of event-packet%})
+on packet event play_client_settings: #Save the informations to use them later, with the function SkinReload 
+	{DM::MCVersion} >= 15
+	set {DM::HiddenPSettings::%player%::Lang} to string field 0 of event-packet
+	set {DM::HiddenPSettings::%player%::View} to int field 0 of event-packet
+	set {DM::HiddenPSettings::%player%::ChatVisibility} to chatvisibility field 0 of event-packet
+	set {DM::HiddenPSettings::%player%::ChatColor} to boolean field 0 of event-packet
+	set {DM::HiddenPSettings::%player%::Skin} to int field 1 of event-packet
+	set {DM::HiddenPSettings::%player%::Hand} to object field 5 of event-packet #hand field 0 of event-packet doesn't work in 1.15/1.16, so it must be stored as an object (sadly)
+on packet event play_client_held_item_slot:
+	{DM::MCVersion} >= 16
+	set {DM::ItemSlot::%player%} to int field 0 of event-packet #Show what the player is holding in 1.16
+
+
+#Functions: API
+#These functions are pretty similar to the code above, so I won't comment much here
+#Check https://phe0x.fr/DisguiseMe/Functions.html (ugly but readable)
+function Disguise(p: players, mob: string, ForAll: boolean, ToPlayers: players) :: int: #Disguise( players to disguise, "mob", True if for all players/false otherwise, Players that will see the disguise |MUST BE FILLED EVEN IF YOU PUT TRUE FOR ALL PLAYERS, IT WONT BE USED|)									#Exemple: CF SkriptMC
+	set {_id} to MobToId({_mob})
+	if {DM::MCVersion} <= 12:	
+		set {_id} to MobToId12({_mob}) 
+	if {DM::MCVersion} >= 16:	
+		set {_id} to MobToId16({_mob})
+	if {_id} is -1:
+		send "&c[DisguiseMe] Function called with a mob &b%{_mob}%&c that doesn't exist !" to console
+		return 0
+		stop
+	if {_id} is -5:
+		send "&c[Diguise] Function called with a mob &b(%{_mob}%) &cthat doesn't exist in this version &d(%{DM::MCVersion}%&d)" to console
+		return 0
+		stop
+	if {_id} is -6:
+		send "&c[Diguise] Function called with a mob &b(%{_mob}%) &cthat was removed ! &d(%{DM::MCVersion}%&d)" to console
+		return 0
+		stop
+	if {DM::MCVersion} is 15:
+		if {_mob} is not "{@ArmorStand}" or "{@Bat}" or "{@Bee}":
+			add 1 to {_id}
+	if {DM::MCVersion} is 13:
+		if {_mob} is "{@ArmorStand}" or "{@Bat}" or "{@Blaze}":
+			set {_id} to {_id}
+		else if {_mob} is "{@Cave_Spider}" or "{@Chicken}" or "{@Cod}" or "{@Cow}" or "{@Cow}" or "{@Creeper}" or "{@Donkey}" or "{@Dolphin}" or "{@Drowned}" or "{@Elder_Guardian}" or "{@Ender_Dragon}" or "{@Enderman}" or "{@Endermite}" or "{@Evoker}" or "{@Magma_Cube}":
+			remove 1 from {_id}
+		else if {_mob} is "{@Ghast}" or "{@Giant}" or "{@Guardian}" or "{@Horse}" or "{@Husk}" or "{@Illusioner}" or "{@Llama}" or "{@Mule}" or "{@Mooshroom}" or "{@Ocelot}":
+			remove 2 from {_id}
+		else if {_mob} is "{@Parrot}" or "{@Pig}" or "{@PufferFish}" or "{@Zombie_Pigman}" or "{@Polar_Bear}" or "{@Rabbit}" or "{@Salmon}" or "{@Sheep}" or "{@Shulker}" or "{@SilverFish}" or "{@Skeleton}" or "{@Skeleton_Horse}" or "{@Slime}" or "{@Snow_Golem}" or "{@Spider}" or "{@Squid}" or "{@Stray}":
+			remove 3 from {_id}
+		else if {_mob} is "{@Tropical_Fish}" or "{@Turtle}":
+			remove 4 from {_id}
+		else if {_mob} is "{@Vex}" or "{@Villager}" or "{@Iron_Golem}" or "{@Vindicator}":
+			remove 5 from {_id}
+		else:
+			remove 7 from {_id}
+	loop {_p::*}:
+		clear {_pass}
+		set {_exception} to loop-value
+		set {_packet} to new play_server_spawn_entity_living packet
+		set {_eId} to {_exception}.getEntityId()
+		set {_uuid} to {_exception}'s uuid
+		set {_xloc} to x location of {_exception}
+		set {_yloc} to y location of {_exception}
+		set {_zloc} to z location of {_exception}
+		set {_pitch} to ({_exception}'s location).getPitch()
+		set {_yaw} to ({_exception}'s location).getYaw()
+		set {_fYaw} to {_yaw}*256/360 
+		set {_fPitch} to {_pitch}*256/360
+		if {DM::MCVersion} >= 9:
+			set int pnum 0 of {_packet} to {_eId} #EID
+			set uuid field 0 of {_packet} to "%{_uuid}%" #E UUID
+			set int pnum 1 of {_packet} to {_id} #Type of mob
+			set double pnum 0 of {_packet} to {_xloc}
+			set double pnum 1 of {_packet} to {_yloc}
+			set double pnum 2 of {_packet} to {_zloc}
+			set int pnum 2 of {_packet} to 0
+			set int pnum 3 of {_packet} to 0
+			set int pnum 4 of {_packet} to 0
+			set byte pnum 0 of {_packet} to {_fYaw} #arg-1's yaw
+			set byte pnum 1 of {_packet} to {_fPitch} #
+			set byte pnum 2 of {_packet} to {_fYaw}
+		if {DM::MCVersion} <= 8:
+			set int pnum 0 of {_packet} to {_eId} #EID
+			set int pnum 1 of {_packet} to {_id} #Type of mob
+			set int pnum 2 of {_packet} to {_xloc}*32 #Pos X
+			set int pnum 3 of {_packet} to {_yloc}*32 #Pos Y
+			set int pnum 4 of {_packet} to {_zloc}*32 #Pos Z
+			set int pnum 5 of {_packet} to 0 
+			set int pnum 6 of {_packet} to 0 
+			set int pnum 7 of {_packet} to 0 
+			set byte pnum 0 of {_packet} to {_fYaw} 
+			set byte pnum 1 of {_packet} to {_fPitch} 
+			set byte pnum 2 of {_packet} to {_fYaw} 
+		if {@Name} is true:
+			if {DM::MCVersion} is 9 or 10 or 11 or 12:
+				set watched string 2 of data watcher field 0 of {_packet} to "%{_exception}%" 
+			else if {DM::MCVersion} is 13:
+				set {_name} to Optional.of(new ChatComponentText("%{_exception}%"))
+				set {_WDW} to new WrappedDataWatcher() 
+				set {_Serializer} to DWReg.getChatComponentSerializer(true)
+				set {_Dw} to new DWObject(2 and {_Serializer})
+				{_WDW}.setObject({_Dw} and {_name})		
+				set data watcher field 0 of {_packet} to {_WDW}
+			else if {DM::MCVersion} <= 8:
+				set {_name} to "%{_exception}%"
+				set {_WDW} to new WrappedDataWatcher()
+				{_WDW}.setObject(2 and {_name})	
+				set data watcher field 0 of {_packet} to {_WDW}
+			else: 
+				set {_packetMeta} to new play_server_entity_metadata packet
+				set int pnum 0 of {_packetMeta} to {_exception}.getEntityId()
+				set {_name} to Optional.of(new ChatComponentText("%{_exception}%"))
+				set {_WDW} to new WrappedDataWatcher() 
+				set {_Serializer} to DWReg.getChatComponentSerializer(true)
+				set {_Dw} to new DWObject(2 and {_Serializer})
+				{_WDW}.setObject({_Dw} and {_name})		
+				set watchable collection field 0 of {_packetMeta} to {_WDW}
+		if {@UpdateHand} is true:
+			if {DM::MCVersion} <= 15:
+				set {_packetHand} to new play_server_entity_equipment packet
+				set int field 0 of {_packetHand} to {_exception}.getEntityId()
+				if {DM::MCVersion} is 8:
+					set int field 1 of {_packetHand} to 0
+				if {DM::MCVersion} > 8:
+					set itemslot field 0 of {_packetHand} to "mainhand"
+				set itemstack field 0 of {_packetHand} to {_exception}'s tool
+		loop all players in radius 50 around {_exception}: 
+			clear {_pass}
+			if {_ForAll} is false: #Could be optimized by sending the packet to everyone that see the disguise (if there is only a few players)
+				if {_ToPlayers::*} doesn't contain loop-player: #A protection to avoid the players being soft lock
+					set {_pass} to false
+			{_pass} is not false
+			loop-player is not {_exception}
+			send packet {_packet} to loop-player
+			send packet {_packetMeta} to loop-player
+			send packet {_packetHand} to loop-player
+			if {@UpdateHand} is true:
+				{DM::MCVersion} >= 16
+				UpdateHand16({_exception})
+		set {DM::HIDDENPlayer::%{_uuid}%} to true
+		set {DM::HIDDENUUID::%{_eId}%} to {_uuid}
+		set {DM::HIDDENId::%{_eId}%} to {_exception}
+		set {DM::HIDDENDisguise::%{_eId}%} to {_id}
+		if {_ForAll} is false:
+			set {DM::HIDDENForAll::%{_eId}%} to false
+			set {DM::HiddenList::%{_eId}%::*} to {_ToPlayers::*}
+		if {_ForAll} is true:
+			set {DM::HIDDENForAll::%{_eId}%} to true
+			clear {DM::HiddenList::%{_eId}%::*} 
+	return 1
+function Undisguise(p: offline players):
+	loop {_p::*}:
+		if loop-value is online:
+			set {_EId} to loop-value.getEntityId()
+			clear {DM::HIDDENPlayer::%uuid of loop-value%}
+			clear {DM::HIDDENUUID::%{_EId}%}
+			clear {DM::HIDDENId::%{_EId}%}
+			clear {DM::HIDDENDisguise::%{_EId}%}
+			if {@UpdateHand} is true:
+				{DM::MCVersion} <= 15
+				set {_packetHand} to new play_server_entity_equipment packet
+				set int field 0 of {_packetHand} to {_EId}
+				if {DM::MCVersion} is 8:
+					set int field 1 of {_packetHand} to 0
+				if {DM::MCVersion} > 8:
+					set itemslot field 0 of {_packetHand} to "mainhand"
+				set itemstack field 0 of {_packetHand} to loop-value's tool
+			if {@UpdateHead} is true:
+				set {_packetHead} to new play_server_entity_head_rotation packet
+				set int field 0 of {_packetHead} to {_EId}
+				set {_yaw} to ({_undisguise}'s location).getYaw()
+				set {_fYaw} to round({_yaw}*256/360)
+				set byte field 0 of {_packetHead} to {_fyaw}
+			set {_playerlist::*} to all players in radius 50 around loop-value
+			hide loop-value-1 from {_playerlist::*} 
+			reveal loop-value-1 to {_playerlist::*}
+			send packet {_packetHand} to {_playerlist::*}
+			wait 1 tick
+			send packet {_packetHead} to {_playerlist::*}
+			clear {DM::HiddenList::%{_EId}%::*}
+			clear {DM::HIDDENForAll::%{_EId}%}
+		else:
+			set {_uuid} to uuid of loop-value
+			clear {DM::LeftHiddenDisguise::%{_uuid}%}
+			clear {DM::LeftHiddenForAll::%{_uuid}%}
+			clear {DM::LeftHiddenList::%{_uuid}%::*}
+function UndisguiseOnline(p: players):
+	loop {_p::*}: 
+		set {_EId} to loop-value.getEntityId()
+		clear {DM::HIDDENPlayer::%uuid of loop-value%}
+		clear {DM::HIDDENUUID::%{_EId}%}
+		clear {DM::HIDDENId::%{_EId}%}
+		clear {DM::HIDDENDisguise::%{_EId}%}
+		if {@UpdateHand} is true:
+			{DM::MCVersion} <= 15
+			set {_packetHand} to new play_server_entity_equipment packet
+			set int field 0 of {_packetHand} to {_EId}
+			if {DM::MCVersion} is 8:
+				set int field 1 of {_packetHand} to 0
+			if {DM::MCVersion} > 8:
+				set itemslot field 0 of {_packetHand} to "mainhand"
+			set itemstack field 0 of {_packetHand} to loop-value's tool
+		if {@UpdateHead} is true:
+			set {_packetHead} to new play_server_entity_head_rotation packet
+			set int field 0 of {_packetHead} to {_EId}
+			set {_yaw} to (loop-value's location).getYaw()
+			set {_fYaw} to round({_yaw}*256/360) 
+			set byte field 0 of {_packetHead} to {_fyaw}
+		set {_playerlist::*} to all players in radius 50 around loop-value
+		hide loop-value-1 from {_playerlist::*} 
+		reveal loop-value-1 to {_playerlist::*} 
+		send packet {_packetHand} to {_playerlist::*} 
+		wait 1 tick
+		send packet {_packetHead} to {_playerlist::*}
+		clear {DM::HiddenList::%{_EId}%::*}
+		clear {DM::HIDDENForAll::%{_EId}%}
+function UndisguiseOffline(p: offline players): #Having both is better since it's less checks (and faster, because Skript doesn't like offline players)
+	loop {_p::*}:
+		set {_uuid} to uuid of loop-value
+		clear {DM::LeftHiddenDisguise::%{_uuid}%}
+		clear {DM::LeftHiddenForAll::%{_uuid}%}
+		clear {DM::LeftHiddenList::%{_uuid}%::*}
+function IsDisguise(p: offline players) :: boolean:
+	loop {_p::*}:
+		if {DM::HIDDENPlayer::%uuid of loop-value%} is not true:
+			if {DM::LeftHiddenDisguise::%uuid of loop-value%} is not true:
+				return false
+				stop
+	return true
+function IsDisguiseOnline(p: players) :: boolean: #Don't use offline players if it's not necessary
+	loop {_p::*}:
+		if {DM::HIDDENPlayer::%uuid of loop-value%} is not true:
+			return false
+			stop
+	return true
+function IsDisguiseOffline(p: offline players) :: boolean:
+	loop {_p::*}:
+		if {DM::LeftHiddenDisguise::%uuid of loop-value%} is not true:
+			return false
+			stop
+	return true
