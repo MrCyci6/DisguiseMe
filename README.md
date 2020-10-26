@@ -20,7 +20,7 @@
  * There are other options, but you shouldn't modify them unless you know what you're doing
 
 ![Addons](https://i.ibb.co/QdcGkjv/Addons.png)
-* You need a [recent version of Skript](https://github.com/SkriptLang/Skript/releases) if possible
+* You need a [recent version of Skript](https://github.com/SkriptLang/Skript/releases) if possible (or [here](https://github.com/Matocolotoe/Skript-1.8/releases) for MC 1.8)
 * [ThatPacketAddon](https://forums.skunity.com/resources/thatpacketaddon.847/) (for packets)
 * [Skript-Mirror](https://skripttools.net/dl/skript-mirror+2.0.0-SNAPSHOT.jar) (EntityId, pitch, yaw & packets) (or skript-reflect but I didn't test with it)
 * [ProtocolLib](https://www.spigotmc.org/resources/protocollib.1997/) (for packets)
@@ -41,6 +41,7 @@ You can use functions in order to avoid "make console execute command /disguise.
 ![Thanks](https://i.ibb.co/MkrDvfz/Thanks.png)
 * Rush²Fer for helping me giving a name to the entities in 1.13 and above, ThatPacketAddon not working with optionnal chat
 * CarloDrift for giving me ideas and helping me test this
+* Anarchick for the help on the functions to show the stuff of the player in 1.16
 * And you for downloading or contributing to this script :D
 
 ![Bugs](https://i.ibb.co/ZXfW03c/Q-B.png)
