@@ -22,8 +22,8 @@
 ![Addons](https://i.ibb.co/QdcGkjv/Addons.png)
 * You need a [recent version of Skript](https://github.com/SkriptLang/Skript/releases) if possible (or [here](https://github.com/Matocolotoe/Skript-1.8/releases) for MC 1.8)
 * [ThatPacketAddon](https://forums.skunity.com/resources/thatpacketaddon.847/) (for packets)
-* [Skript-Mirror](https://skripttools.net/dl/skript-mirror+2.0.0-SNAPSHOT.jar) (EntityId, pitch, yaw & packets) (or skript-reflect but I didn't test with it)
-* [ProtocolLib](https://www.spigotmc.org/resources/protocollib.1997/) (for packets)
+* [Skript-Mirror](https://skripttools.net/dl/skript-mirror+2.0.0-SNAPSHOT.jar) (EntityId, pitch, yaw & packets) (or skript-reflect as you want)
+* [Latest stable version of ProtocolLib](https://www.spigotmc.org/resources/protocollib.1997/) if you're in 1.11 or below or [Latest 4.6 snapshot of ProtocolLib](https://ci.dmulloy2.net/job/ProtocolLib/) if you're in 1.12 or above (for packets) (you can still use the latest stable version of ProtocolLib in 1.15 or below if you wish to, but it's mandatory in 1.16)
 
 ![Bugs](https://i.ibb.co/Jj9pkD7/bugs.png)
 Known bugs that cant be fixed or that I don't have the time to fix right now
@@ -34,6 +34,7 @@ Known bugs that cant be fixed or that I don't have the time to fix right now
 * In 1.9 & 1.10, rightclicking on a villager can make the clicker crash, and in 1.8 it makes him invisible for the clicker
 * Bats look afk, but doing a metadata customization for each mob would be too long
 * NPCs are hidden with Citizens2. I can't fix it, just listening to a packet make this (even if I don't modify it)
+* You'll have some errors when you reload the script if you don't have ProtocolLib 4.6 (We just need to wait for it to be stable and this will be fixed)
 
 ![Functions](https://i.ibb.co/GdzPPfj/Functions.png)
 You can use functions in order to avoid "make console execute command /disguise.." and to disguise some players for others players. See more [here](https://phe0x.fr/DisguiseMe/Functions.html) (ugly but still readable) or read the code
