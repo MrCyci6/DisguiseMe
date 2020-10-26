@@ -1,6 +1,6 @@
 #This script works from minecraft 1.8 up to minecraft 1.16
-#You can contact me on Spigot/SkUnity or Discord (Phe0X#5907) if you find any bug or need help
-#Addons needed are ThatPacketAddon, ProtocolLib and Skript-mirror
+#You can contact me on Spigot/SkUnity/Github or Discord (Phe0X#5907) if you find any bug or need help
+#Addons needed are ThatPacketAddon, ProtocolLib and Skript-mirror(or skript-reflect)
 #You can customize the name of each mob below, you just have to modify the options
 #For example, if you want to call the Armorstand "Stand", just change "Armorstand" by "Stand"
 #When you'll use /disguise Armorstand, it won't work anymore, instead you will have to use the command /disguise Stand
@@ -8,15 +8,13 @@
 #If you are a dev and you want some function to disguise some players for others, check this https://phe0x.fr/DisguiseMe/Functions.html/ or the code
 
 
-#Special thanks to Rush²Fer (He helped me to put the name of player above a disguise, because ThatPacketAddon can't take OptionalChat) and to CarloDrift (Discovered some bugs and gave some ideas)
+#Special thanks to Rush²Fer (He helped me to put the name of player above a disguise, because ThatPacketAddon can't take OptionalChat), to Anarchick (helped me to show the stuff in 1.16) and to CarloDrift (Discovered some bugs and gave some ideas)
 options:
 	Name: true #Name of the disguised player above its disguise
 	#⚠ Don't work on some entities that can't be renamed such as the Armorstand
 	#[Doesn't seem to work with Kosmos in 1.15.2 idk why]
 
-	UpdateHand: true #Show the right item in the hand of a player that just changed its disguise
-
-	UpdateStuffExp: true #⚠Show the right armor when a player disguises himself in 1.12 or less
+	UpdateStuff: true #Show the stuff of the player when he disguises on supported mobs (Zombies or Skeletons for instance) 
 
 	UpdateHead: true #Make have the right yaw when he comes into visible range
 	
@@ -66,6 +64,7 @@ options:
 	Phantom: Phantom
 	Pig: Pig
 	Piglin: Piglin
+	Piglin_Brute: PiglinBrute
 	PufferFish: PufferFish
 	Polar_Bear: PolarBear
 	Rabbit: Rabbit
@@ -106,14 +105,20 @@ option ver:
 		return console.getServer().getClass().getPackage().getName().split("\.")[3] #Nms version
 import: #mandatory to have a name above the disguise, since TPA doesn't have optional chat things (so I must use protocollib & mirror)
 	java.util.Optional 
-	net.minecraft.server.{@ver}.ChatComponentText 
+	net.minecraft.server.{@ver}.ChatComponentText
 	com.comphenix.protocol.wrappers.WrappedDataWatcher 
 	com.comphenix.protocol.wrappers.WrappedDataWatcher$Registry as DWReg
 	com.comphenix.protocol.wrappers.WrappedDataWatcher$WrappedDataWatcherObject as DWObject
+	java.util.ArrayList #1.16 client side equipment 
+	com.comphenix.protocol.wrappers.EnumWrappers$ItemSlot
+	com.comphenix.protocol.wrappers.Pair
 on load: #Plugins & Settings that could create problems
 	set {_mc::*} to minecraft version split at "."
 	set {_mc::2} to {_mc::2} parsed as an integer
 	set {DM::MCVersion} to {_mc::2}
+	if {_mc::2} is 16:
+		set {_mc::3} to {_mc::3} parsed as an integer
+		set {DM::MCSubVersion} to {_mc::3}
 	loop all players:
 		loop-player is op
 		add loop-player to {_sendto::*}
@@ -126,18 +131,90 @@ on load: #Plugins & Settings that could create problems
 		{_pluginlist::*} is set
 		if "%{_pluginlist::*}%" does not contain "%loop-value%": #send a message if a plugin is missing
 			add loop-value to {_missing::*}
+	loop {_pluginlist::*}:
+		if  "%loop-value%" contains "ProtocolLib":
+			set {_ver} to loop-value.getDescription().getVersion()
+			# broadcast "&3%{_ver}%"
+			set {_ver::*} to {_ver} split at "."
+			# broadcast "&1%{_ver::2}%"
+			set {_finalverPlib} to {_ver::2} parsed as a number
+		if "%loop-value%" contains "Skript":
+			"%loop-value%" doesn't contain "reflect" or "mirror" #we never know
+			{DM::MCVersion} is 8
+			set {_verSkript} to loop-value.getDescription().getVersion()
+			if {_verSkript} contains "2.2" or "2.1.2":
+				set {_oldSkript} to true #To use later, the version may be overwritten if another plugin is called Skript
+	if {_finalverPlib} <= 5:
+		if {DM::MCVersion} <= 15:
+			if {DM::MCVersion} <= 11:
+				send "&6DisguiseMe &b> &4---------------------------------" to {_sendto::*}
+				send "&6DisguiseMe &b> " to {_sendto::*}
+				send "&6DisguiseMe &b> " to {_sendto::*}
+				send "&6DisguiseMe &b> &cYou'll get errors when reloading the script but please ignore them" to {_sendto::*}
+				if {DM::MCVersion} is 8:
+					if {_oldSkript} is true:
+						send "&6DisguiseMe &b> &3This script uses functionnality of ProtocolLib 4.6 for MC 1.16, however, you're using ProtocolLib %{_ver}%. It also uses new features of Skript (for offhand in 1.9+)" to {_sendto::*}
+						send "&6DisguiseMe &b> &3Sadly, ProtocolLib 4.6 is still in beta and after my tests, doesn't work yet in 1.11 and below but if you wish to, you can download the latest version of Skript for 1.8(a fork) to remove 2 errors: https://github.com/Matocolotoe/Skript-1.8/releases" to {_sendto::*}
+						send "&6DisguiseMe &b> &3If you wish to remove the 8 errors, put a quote (##) at the begginig of those lines:" to {_sendto::*}
+						send "&6DisguiseMe &b> &3Lines: 661, 665, 669, 673, 677, 680, 681 and 714" to {_sendto::*}
+						send "&6DisguiseMe &b> " to {_sendto::*}
+						send "&6DisguiseMe &b> " to {_sendto::*}
+						send "&6DisguiseMe &b> &4---------------------------------" to {_sendto::*}	
+						set {_msgpass} to true
+				{_msgpass} isn't true
+				send "&6DisguiseMe &b> &3This script uses functionnality of ProtocolLib 4.6 for MC 1.16, however, you're using ProtocolLib %{_ver}%" to {_sendto::*}
+				send "&6DisguiseMe &b> &3Sadly, ProtocolLib 4.6 is still in beta and after my tests, doesn't work yet in 1.11 and below" to {_sendto::*}
+				send "&6DisguiseMe &b> &3If you wish to remove the 6 errors, put a quote (##) at the begginig of those lines:" to {_sendto::*}
+				send "&6DisguiseMe &b> &3Lines: 661, 665, 669, 673, 677, and 681" to {_sendto::*}
+				send "&6DisguiseMe &b> " to {_sendto::*}
+				send "&6DisguiseMe &b> " to {_sendto::*}
+				send "&6DisguiseMe &b> &4---------------------------------" to {_sendto::*}	
+			if {DM::MCVersion} > 11:
+				send "&6DisguiseMe &b> &4---------------------------------" to {_sendto::*}
+				send "&6DisguiseMe &b> " to {_sendto::*}
+				send "&6DisguiseMe &b> " to {_sendto::*}
+				send "&6DisguiseMe &b> &cProtocolLib isn't up to date" to {_sendto::*}
+				send "&6DisguiseMe &b> &3You may encounter errors when reloading, but they can be safely ignored" to {_sendto::*}
+				send "&6DisguiseMe &b> &3 You can download ProtocolLib 4.6(may still be in beta) to fix this !" to {_sendto::*}
+				send "&6DisguiseMe &b> " to {_sendto::*}
+				send "&6DisguiseMe &b> " to {_sendto::*}
+				send "&6DisguiseMe &b> &4---------------------------------" to {_sendto::*}	
+		if {DM::MCVersion} >= 16:
+			send "&6DisguiseMe &b> &4---------------------------------" to {_sendto::*}
+			send "&6DisguiseMe &b> " to {_sendto::*}
+			send "&6DisguiseMe &b> " to {_sendto::*}
+			send "&6DisguiseMe &b> &cProtocolLib isn't up to date" to {_sendto::*}
+			send "&6DisguiseMe &b> &4You may encounter severe bugs & errors and Updatestuff function won't work" to {_sendto::*}
+			send "&6DisguiseMe &b> &4Download ProtocolLib 4.6(may still be in beta but stable according to my tests) to fix this !" to {_sendto::*}
+			send "&6DisguiseMe &b> " to {_sendto::*}
+			send "&6DisguiseMe &b> " to {_sendto::*}
+			send "&6DisguiseMe &b> &4---------------------------------" to {_sendto::*}
+	if {_finalverPlib} >= 6:
+		"%{_ver}%" contains "SNAPSHOT" or "beta" or "alpha" #it's snapshot iirc but we never know 
+		if {DM::MCVersion} <= 11:
+			send "&6DisguiseMe &b> &4---------------------------------" to {_sendto::*}
+			send "&6DisguiseMe &b> " to {_sendto::*}
+			send "&6DisguiseMe &b> " to {_sendto::*}
+			send "&6DisguiseMe &b> &cYou're not using a stable version of ProtocolLib !" to {_sendto::*}
+			send "&6DisguiseMe &b> &4According to my last test, the disguise may not work with an unstable version of ProtocolLib 4.6 !" to {_sendto::*}
+			send "&6DisguiseMe &b> &4If something doesn't work, please try using an older (and stable) version of ProtocolLib such as 4.5.1" to {_sendto::*}
+			send "&6DisguiseMe &b> " to {_sendto::*}
+			send "&6DisguiseMe &b> " to {_sendto::*}
+			send "&6DisguiseMe &b> &4---------------------------------" to {_sendto::*}
 	if {_missing::*} is set:
-		send "&6DisguiseMe &b> &4!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" to {_sendto::*}
-		send "&6DisguiseMe &b> &4!                                                  !" to {_sendto::*}
-		send "&6DisguiseMe &b> &4!   &3%size of {_missing::*}%&4 mandatory plugin(s) missing                  !" to {_sendto::*}
+		send "&6DisguiseMe &b> &4---------------------------------" to {_sendto::*}
+		send "&6DisguiseMe &b> " to {_sendto::*}
+		send "&6DisguiseMe &b> " to {_sendto::*}
+		send "&6DisguiseMe &b> &3%size of {_missing::*}%&4 mandatory plugin(s) missing!" to {_sendto::*}
 		send "&6DisguiseMe &b> &4Please add &3%{_missing::*}%" to {_sendto::*}
-		send "&6DisguiseMe &b> &4!                                                  !" to {_sendto::*}
-		send "&6DisguiseMe &b> &4!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" to {_sendto::*}
+		send "&6DisguiseMe &b> " to {_sendto::*}
+		send "&6DisguiseMe &b> " to {_sendto::*}
+		send "&6DisguiseMe &b> &4---------------------------------" to {_sendto::*}
 	if {DM::MCVersion} is 9 or 10 or 11:
 		if {@JoinDelay} < 1 second:
 			send "&6DisguiseMe &b> &4!!! The Join delay is less than 1 second, this could cause crashes to nearby players when a disguised player connects !!!" to {_sendto::*}
 
-#Functions must be at the beginning with old versions of minecraft
+#Functions must be at the beginning with old versions of minecraft & Skript
 
 
 #---------------------------------------------
@@ -153,7 +230,7 @@ function MobToId(mob: text) :: int: #When an entity spawns, minecraft use a Type
 			return 4
 		else:
 			return -5
-	if {_mob} is "{@Hoglin}" or "{@Piglin}" or "{@Strider}" or "{@Zoglin}" or "{@Zombified_Piglin}": #Mob 1.16 uniquement, impossible avec la fonction utilisé en dessous
+	if {_mob} is "{@Hoglin}" or "{@Piglin}" or "{@Piglin_Brute}" or "{@Strider}" or "{@Zoglin}" or "{@Zombified_Piglin}": #Mob 1.16 uniquement, impossible avec la fonction utilisé en dessous
 		return -5
 	if {DM::MCVersion} is 13:
 		if {_mob} is "{@Cat}" or "{@Fox}" or "{@Panda}" or "{@Trader_Llama}" or "{@Pillager}" or "{@Wandering_Trader}" or "{@Ravager}":
@@ -291,6 +368,10 @@ function MobToId(mob: text) :: int: #When an entity spawns, minecraft use a Type
 	return -1
 #Function that converts a mob into an id for 1.16
 function MobToId16(mob: text) :: int: #Needs a new function, since there's almost no logical order (except Alphabetical, but hey, that's faster this way)
+	if {_mob} is "{@Piglin_Brute}":
+		if {DM::MCSubVersion} > 1: #Added in 1.16.2
+			return -10 #With that I don't have to create a new function only for 1.16.2+ (This new mob shifted all id after 61 by 1 and took the id 61)
+		return -1
 	if {_mob} is "{@Zombie_Pigman}":
 		return -6 #Removed
 	if {_mob} is "{@ArmorStand}":
@@ -434,7 +515,7 @@ function MobToId16(mob: text) :: int: #Needs a new function, since there's almos
 	return -1
 #Function that converts a mob into an id for 1.12, 1.11, 1.10, 1.9 and 1.8
 function MobToId12(mob: text) :: int:
-	if {_mob} is "{@Bee}" or "{@Cod}" or "{@Dolphin}" or "{@Drowned}" or "{@Fox}" or "{@Panda}" or "{@PufferFish}" or "{@Salmon}" or "{@Trader_Llama}" or "{@Tropical_Fish}" or "{@Turtle}" or "{@Pillager}" or "{@Wandering_Trader}" or "{@Phantom}" or "{@Ravager}" or "{@Hoglin}" or "{@Piglin}" or "{@Strider}" or "{@Zoglin}" or "{@Zombified_Piglin}":
+	if {_mob} is "{@Bee}" or "{@Cod}" or "{@Dolphin}" or "{@Drowned}" or "{@Fox}" or "{@Panda}" or "{@PufferFish}" or "{@Salmon}" or "{@Trader_Llama}" or "{@Tropical_Fish}" or "{@Turtle}" or "{@Pillager}" or "{@Wandering_Trader}" or "{@Phantom}" or "{@Ravager}" or "{@Hoglin}" or "{@Piglin}" or "{@Piglin_Brute}" or "{@Strider}" or "{@Zoglin}" or "{@Zombified_Piglin}":
 		return -5
 	if {DM::MCVersion} <= 11:
 		if {_mob} is "{@Illusioner}" or "{@Parrot}":
@@ -568,25 +649,83 @@ function SkinReload(p: player): #Mandatory only for 1.15 and 1.16
 	set int field 1 of {_packetsettings2} to {DM::HiddenPSettings::%{_p}%::Skin}+1 #Add the cape back
 	set object field 5 of {_packetsettings2} to {DM::HiddenPSettings::%{_p}%::Hand}
 	receive packet {_packetsettings2} from {_p}
-function UpdateHand16(p: player): #Only for 1.16, since the packet changed and I have no clue how to get the field of the equipment packet to work
-	{DM::MCVersion} >= 16
-	if {DM::ItemSlot::%{_p}%} is not set:
-		send "&6DisguiseMe &b> &6! The function UpdateHand was called, but the slot is not set. This is an anti-kick protection, hence %{_p}%'s hand item wasn't reload!" to console
-		send "&6DisguiseMe &b> &3If you get this message again, even after you disconnect and reconnect, please contact me on Discord, Phe0X##5907 and tell me this number: &4##001!" to console
-		stop
-	set {_packet} to new play_client_held_item_slot packet
-	if {DM::ItemSlot::%{_p}%} is 0: #Otherwise you get kicked for Hacking by Spigot
-		set {_slot1} to 8
-		set {_slot2} to 0
-	else:
-		set {_slot1} to {DM::ItemSlot::%{_p}%} - 1
-		set {_slot2} to {DM::ItemSlot::%{_p}%}
-	set int field 0 of {_packet} to {_slot1}
-	receive packet {_packet} from {_p}
-	wait 1 tick
-	set {_packet} to new play_client_held_item_slot packet
-	set int field 0 of {_packet} to {_slot2}
-	receive packet {_packet} from {_p}
+
+#Function to show the stuff of a player on his disguise when possible (like on a Zombie, Giant, Skeleton...)
+#Thanks to Anarchick for the help on this
+function UpdateStuff16(p: player, tosee: players): #Quite long but threw errors when compacted (cus i probably messed up, but this work fine!)
+	set {_packetupdatestuff} to new play_server_entity_equipment packet
+	set int pnum 0 of {_packetupdatestuff} to {_p}.getEntityId()
+	set {_ArrayList} to new ArrayList()
+	set {_HeadSlot} to ItemSlot.valueOf("HEAD") #Helmet
+	set {_helmet} to {_p}'s helmet
+	set {_PairHead} to new Pair({_HeadSlot} and {_helmet}) 
+	{_ArrayList}.add({_PairHead})
+	set {_ChestSlot} to ItemSlot.valueOf("CHEST") #Chestplate
+	set {_chestplate} to {_p}'s chestplate
+	set {_PairChest} to new Pair({_ChestSlot} and {_chestplate})
+	{_ArrayList}.add({_PairChest})
+	set {_LegsSlot} to ItemSlot.valueOf("LEGS") #Leggings
+	set {_leggings} to {_p}'s leggings
+	set {_PairLegs} to new Pair({_LegsSlot} and {_leggings})
+	{_ArrayList}.add({_PairLegs})
+	set {_FeetSlot} to ItemSlot.valueOf("FEET") #Boots
+	set {_boots} to {_p}'s boots
+	set {_PairFeet} to new Pair({_FeetSlot} and {_boots})
+	{_ArrayList}.add({_PairFeet})
+	set {_HandSlot} to ItemSlot.valueOf("MAINHAND") #Main hand
+	set {_hand} to {_p}'s tool
+	set {_PairHand} to new Pair({_HandSlot} and {_hand})
+	{_ArrayList}.add({_PairHand})
+	set {_OffSlot} to ItemSlot.valueOf("OFFHAND") #Off hand
+	set {_off} to {_p}'s off hand tool
+	set {_PairOff} to new Pair({_OffSlot} and {_off})
+	{_ArrayList}.add({_PairOff})
+	{_packetupdatestuff}.getSlotStackPairLists().write(0 and {_ArrayList})
+	send packet {_packetupdatestuff} to {_tosee::*}
+
+#The same function for 1.8 and 1.9-1.15 (Thanks Anarchick for the tiny help on this one too)
+function UpdateStuff(p: player, tosee: players): 
+	remove {_p} from {_tosee::*}
+	set {_id} to {_p}.getEntityId()
+	set {_packetHand} to new play_server_entity_equipment packet
+	set {_packetHelmet} to new play_server_entity_equipment packet
+	set {_packetChestplate} to new play_server_entity_equipment packet
+	set {_packetLeggings} to new play_server_entity_equipment packet
+	set {_packetBoots} to new play_server_entity_equipment packet
+	set int pnum 0 of {_packetHand} to {_id}
+	set int pnum 0 of {_packetHelmet} to {_id}
+	set int pnum 0 of {_packetChestplate} to {_id}
+	set int pnum 0 of {_packetLeggings} to {_id}
+	set int pnum 0 of {_packetBoots} to {_id}
+	set itemstack field 0 of {_packetHand} to {_p}'s tool
+	set itemstack field 0 of {_packetHelmet} to {_p}'s helmet
+	set itemstack field 0 of {_packetChestplate} to {_p}'s chestplate
+	set itemstack field 0 of {_packetLeggings} to {_p}'s leggings
+	set itemstack field 0 of {_packetBoots} to {_p}'s boots
+	if {DM::MCVersion} > 8: #The packet was changed in 1.9 (and was later changed in 1.16). It's the same from 1.9 to 1.15 (both included)
+		set {_packetOffHand} to new play_server_entity_equipment packet #No need to check if the mc version is greater than 15 since this function is called only when the version is less or equal to 15
+		set ItemSlot field 0 of {_packetHand} to "mainhand"
+		set ItemSlot field 0 of {_packetHelmet} to "head" 
+		set ItemSlot field 0 of {_packetChestplate} to "chest" 
+		set ItemSlot field 0 of {_packetLeggings} to "legs" 
+		set ItemSlot field 0 of {_packetBoots} to "feet"
+		set ItemSlot field 0 of {_packetOffHand} to "offhand"
+		set int pnum 0 of {_packetOffHand} to {_id}
+		set itemstack field 0 of {_packetOffHand} to {_p}'s off hand tool
+		send packet {_packetOffHand} to {_tosee::*}
+	if {DM::MCVersion} <= 8:
+		wait 2 ticks #Mandatory for old Skript versions
+		set int field 1 of {_packetHand} to 0
+		set int field 1 of {_packetHelmet} to 4
+		set int field 1 of {_packetChestplate} to 3
+		set int field 1 of {_packetLeggings} to 2
+		set int field 1 of {_packetBoots} to 1
+	send packet {_packetHand} to {_tosee::*}
+	send packet {_packetHelmet} to {_tosee::*}
+	send packet {_packetChestplate} to {_tosee::*}
+	send packet {_packetLeggings} to {_tosee::*}
+	send packet {_packetBoots} to {_tosee::*} 
+
 command /disguise [<text>] [<player>]:
 	permission: self.disguise
 	permission message: &cYou don't have the permission to execute this command
@@ -635,18 +774,33 @@ command /disguise [<text>] [<player>]:
 				send "&dPeaceful &f» &7{@ArmorStand}, {@Bat}, {@Bee}, {@Cat}, {@Chicken}, {@Cod}, {@Cow}, {@Donkey}, {@Dolphin}, {@Fox}, {@Horse}, {@Llama}, {@Mule}, {@Mooshroom}, {@Ocelot}, {@Panda}, {@Parrot}, {@Pig}, {@PufferFish}, {@Polar_Bear}, {@Rabbit}, {@Salmon}, {@Sheep}, {@Skeleton_Horse}, {@Snow_Golem}, {@Squid}, {@Trader_Llama}, {@Tropical_Fish}, {@Turtle}, {@Villager}, {@Iron_Golem}, {@Wandering_Trader}, {@Wolf}, {@Zombie_Horse}"
 				send "&dAggressive &f» &7{@Blaze}, {@Cave_Spider}, {@Creeper}, {@Drowned}, {@Elder_Guardian}, {@Ender_Dragon}, {@Enderman}, {@Endermite}, {@Evoker}, {@Ghast}, {@Giant}, {@Guardian}, {@Husk}, {@Illusioner}, {@Magma_Cube}, {@Zombie_Pigman}, {@Shulker}, {@SilverFish}, {@Skeleton}, {@Slime}, {@Spider}, {@Stray}, {@Vex}, {@Vindicator}, {@Pillager}, {@Witch}, {@Wither}, {@Wither_Skeleton}, {@Zombie}, {@Zombie_Villager}, {@Phantom}, {@Ravager}"
 			else if {DM::MCVersion} is 16:
-				send "&dPeaceful &f» &7{@ArmorStand}, {@Bat}, {@Bee}, {@Cat}, {@Chicken}, {@Cod}, {@Cow}, {@Donkey}, {@Dolphin}, {@Fox}, {@Horse}, {@Llama}, {@Mule}, {@Mooshroom}, {@Ocelot}, {@Panda}, {@Parrot}, {@Pig}, {@PufferFish}, {@Polar_Bear}, {@Rabbit}, {@Salmon}, {@Sheep}, {@Skeleton_Horse}, {@Snow_Golem}, {@Squid}, {@Strider}, {@Trader_Llama}, {@Tropical_Fish}, {@Turtle}, {@Villager}, {@Iron_Golem}, {@Wandering_Trader}, {@Wolf}, {@Zombie_Horse}"
-				send "&dAggressive &f» &7{@Blaze}, {@Cave_Spider}, {@Creeper}, {@Drowned}, {@Elder_Guardian}, {@Ender_Dragon}, {@Enderman}, {@Endermite}, {@Evoker}, {@Ghast}, {@Giant}, {@Guardian}, , {@Hoglin}, {@Husk}, {@Illusioner}, {@Magma_Cube}, {@Phantom}, {@Ravager}, {@Shulker}, {@SilverFish}, {@Skeleton}, {@Slime}, {@Spider}, {@Stray}, {@Vex}, {@Vindicator}, {@Piglin}, {@Pillager}, {@Witch}, {@Wither}, {@Wither_Skeleton}, {@Zombie}, {@Zombie_Villager}, {@Zoglin}, {@Zombified_Piglin}"
+				if {DM::MCSubVersion} < 2: #The piglin brute was added in 1.16.2
+					send "&dPeaceful &f» &7{@ArmorStand}, {@Bat}, {@Bee}, {@Cat}, {@Chicken}, {@Cod}, {@Cow}, {@Donkey}, {@Dolphin}, {@Fox}, {@Horse}, {@Llama}, {@Mule}, {@Mooshroom}, {@Ocelot}, {@Panda}, {@Parrot}, {@Pig}, {@PufferFish}, {@Polar_Bear}, {@Rabbit}, {@Salmon}, {@Sheep}, {@Skeleton_Horse}, {@Snow_Golem}, {@Squid}, {@Strider}, {@Trader_Llama}, {@Tropical_Fish}, {@Turtle}, {@Villager}, {@Iron_Golem}, {@Wandering_Trader}, {@Wolf}, {@Zombie_Horse}"
+					send "&dAggressive &f» &7{@Blaze}, {@Cave_Spider}, {@Creeper}, {@Drowned}, {@Elder_Guardian}, {@Ender_Dragon}, {@Enderman}, {@Endermite}, {@Evoker}, {@Ghast}, {@Giant}, {@Guardian}, , {@Hoglin}, {@Husk}, {@Illusioner}, {@Magma_Cube}, {@Phantom}, {@Ravager}, {@Shulker}, {@SilverFish}, {@Skeleton}, {@Slime}, {@Spider}, {@Stray}, {@Vex}, {@Vindicator}, {@Piglin}, {@Pillager}, {@Witch}, {@Wither}, {@Wither_Skeleton}, {@Zombie}, {@Zombie_Villager}, {@Zoglin}, {@Zombified_Piglin}"
+				else:
+					send "&dPeaceful &f» &7{@ArmorStand}, {@Bat}, {@Bee}, {@Cat}, {@Chicken}, {@Cod}, {@Cow}, {@Donkey}, {@Dolphin}, {@Fox}, {@Horse}, {@Llama}, {@Mule}, {@Mooshroom}, {@Ocelot}, {@Panda}, {@Parrot}, {@Pig}, {@PufferFish}, {@Polar_Bear}, {@Rabbit}, {@Salmon}, {@Sheep}, {@Skeleton_Horse}, {@Snow_Golem}, {@Squid}, {@Strider}, {@Trader_Llama}, {@Tropical_Fish}, {@Turtle}, {@Villager}, {@Iron_Golem}, {@Wandering_Trader}, {@Wolf}, {@Zombie_Horse}"
+					send "&dAggressive &f» &7{@Blaze}, {@Cave_Spider}, {@Creeper}, {@Drowned}, {@Elder_Guardian}, {@Ender_Dragon}, {@Enderman}, {@Endermite}, {@Evoker}, {@Ghast}, {@Giant}, {@Guardian}, , {@Hoglin}, {@Husk}, {@Illusioner}, {@Magma_Cube}, {@Phantom}, {@Ravager}, {@Shulker}, {@SilverFish}, {@Skeleton}, {@Slime}, {@Spider}, {@Stray}, {@Vex}, {@Vindicator}, {@Piglin}, {@Piglin_Brute}, {@Pillager}, {@Witch}, {@Wither}, {@Wither_Skeleton}, {@Zombie}, {@Zombie_Villager}, {@Zoglin}, {@Zombified_Piglin}"
+
 			else:
 				send "&6DisguiseMe &b» &cYour version is not supported, so here is the 1.16 list" 
 				send "&dPeaceful &f» &7{@ArmorStand}, {@Bat}, {@Bee}, {@Cat}, {@Chicken}, {@Cod}, {@Cow}, {@Donkey}, {@Dolphin}, {@Fox}, {@Horse}, {@Llama}, {@Mule}, {@Mooshroom}, {@Ocelot}, {@Panda}, {@Parrot}, {@Pig}, {@PufferFish}, {@Polar_Bear}, {@Rabbit}, {@Salmon}, {@Sheep}, {@Skeleton_Horse}, {@Snow_Golem}, {@Squid}, {@Strider}, {@Trader_Llama}, {@Tropical_Fish}, {@Turtle}, {@Villager}, {@Iron_Golem}, {@Wandering_Trader}, {@Wolf}, {@Zombie_Horse}"
-				send "&dAggressive &f» &7{@Blaze}, {@Cave_Spider}, {@Creeper}, {@Drowned}, {@Elder_Guardian}, {@Ender_Dragon}, {@Enderman}, {@Endermite}, {@Evoker}, {@Ghast}, {@Giant}, {@Guardian}, , {@Hoglin}, {@Husk}, {@Illusioner}, {@Magma_Cube}, {@Phantom}, {@Ravager}, {@Shulker}, {@SilverFish}, {@Skeleton}, {@Slime}, {@Spider}, {@Stray}, {@Vex}, {@Vindicator}, {@Piglin}, {@Pillager}, {@Witch}, {@Wither}, {@Wither_Skeleton}, {@Zombie}, {@Zombie_Villager}, {@Zoglin}, {@Zombified_Piglin}"
+				send "&dAggressive &f» &7{@Blaze}, {@Cave_Spider}, {@Creeper}, {@Drowned}, {@Elder_Guardian}, {@Ender_Dragon}, {@Enderman}, {@Endermite}, {@Evoker}, {@Ghast}, {@Giant}, {@Guardian}, , {@Hoglin}, {@Husk}, {@Illusioner}, {@Magma_Cube}, {@Phantom}, {@Ravager}, {@Shulker}, {@SilverFish}, {@Skeleton}, {@Slime}, {@Spider}, {@Stray}, {@Vex}, {@Vindicator}, {@Piglin}, {@Piglin_Brute}, {@Pillager}, {@Witch}, {@Wither}, {@Wither_Skeleton}, {@Zombie}, {@Zombie_Villager}, {@Zoglin}, {@Zombified_Piglin}"
 			stop
 		set {_id} to MobToId(arg-1)
 		if {DM::MCVersion} <= 12:
 			set {_id} to MobToId12(arg-1)
 		if {DM::MCVersion} >= 16: #1.17 =)
 			set {_id} to MobToId16(arg-1)
+			if {DM::MCSubVersion} > 1:
+				if {_id} >= 61:
+					add 1 to {_id}
+				if {_id} = -10:
+					set {_id} to 61 #Piglin brute (easier to shift everything by 1, see above)
+			if {DM::MCVersion} >= 17: #We never knows lmao
+				if {_id} >= 61: 
+					add 1 to {_id}
+				if {_id} = -10:
+					set {_id} to 61 
 		if {_id} is -1:
 			send "&6DisguiseMe &b» &cThis mob doesn't exist !"
 			send "&3Mob list &7» &b/disguise list"
@@ -757,23 +911,11 @@ command /disguise [<text>] [<player>]:
 				set {_Dw} to new DWObject(2 and {_Serializer})
 				{_WDW}.setObject({_Dw} and {_name})		
 				set watchable collection field 0 of {_packetMeta} to {_WDW}
-		if {@UpdateHand} is true:
-			{DM::MCVersion} <= 15
-			set {_packetHand} to new play_server_entity_equipment packet
-			set int field 0 of {_packetHand} to {_exception}.getEntityId()
-			if {DM::MCVersion} is 8:
-				set int field 1 of {_packetHand} to 0
-			if {DM::MCVersion} > 8:
-				set itemslot field 0 of {_packetHand} to "mainhand"
-			set itemstack field 0 of {_packetHand} to {_exception}'s tool
 		set {_playerlist::*} to all players in radius 50 around {_exception}
 		remove {_exception} from {_playerlist::*}
 		#Show the disguise to all nearby players, without looping (probably faster to do it this way, since otherwise I'd have to loop again)
 		send packet {_packet} to {_playerlist::*}
 		send packet {_packetMeta} to {_playerlist::*}
-		if {DM::MCVersion} is 8:
-			wait 3 tick
-		send packet {_packetHand} to {_playerlist::*}
 		set {DM::HIDDENPlayer::%{_uuid}%} to true
 		set {DM::HIDDENUUID::%{_eId}%} to {_uuid}
 		set {DM::HIDDENId::%{_eId}%} to {_exception}
@@ -783,13 +925,11 @@ command /disguise [<text>] [<player>]:
 			send "&6DisguiseMe &b» &3%{_exception}% is now disguised as &d%arg 1% &afor everyone !" 
 		if arg-2 is not set:
 			send "&6DisguiseMe &b» &3You are now disguised as &d%arg 1% &afor everyone !" 
-		if {@UpdateStuffExp} is true:
-			{DM::MCVersion} <= 12
-			hide {_exception} from {_playerlist::*}
-			reveal {_exception} to {_playerlist::*}
-		if {@UpdateHand} is true:
-			{DM::MCVersion} >= 16
-			UpdateHand16({_exception})
+		if {@UpdateStuff} is true:
+			if {DM::MCVersion} >= 16:
+				UpdateStuff16({_exception}, {_playerlist::*})
+			if {DM::MCVersion} <= 15:
+				UpdateStuff({_exception}, {_playerlist::*})
 on quit:
 	if {DM::HIDDENPlayer::%uuid of player%} is true:
 		set {DM::LeftHiddenDisguise::%uuid of player%} to {DM::HIDDENDisguise::%player.getEntityId()%}
@@ -805,7 +945,6 @@ on quit:
 	clear {DM::HIDDENForAll::%player.getEntityId()%}
 	clear {DM::HiddenList::%player.getEntityId()%::*}
 	clear {DM::HiddenPSettings::%player%::*}
-	clear {DM::ItemSlot::%player%}
 on join:
 	set {DM::IdToPlayer::%player.getEntityId()%} to player
 	set {DM::LastJoin::%player%} to now
@@ -849,11 +988,13 @@ on join:
 			loop all players in radius 50 around {_exception}:
 				loop-player is not {_exception}
 				send packet {_packet} to loop-player
+				UpdateStuff(player, loop-player)
 		if {DM::HIDDENForAll::%player.getEntityId()%} is true:
 			loop all players in radius 50 around {_exception}: 
 				{DM::HiddenList::%player.getEntityId()%::*} contains loop-player
 				loop-player is not {_exception}
 				send packet {_packet} to loop-player
+				UpdateStuff(player, loop-player)
 	clear {DM::LeftHiddenDisguise::%uuid of player%}
 	clear {DM::LeftHiddenForAll::%uuid of player%}
 	clear {DM::LeftHiddenList::%uuid of player%::*}
@@ -890,16 +1031,6 @@ command /undisguise [<offline player>]:
 				send "&6DisguiseMe &b» &3You&a are &cnot &adisguised &canymore !"
 			if arg-1 is set:
 				send "&6DisguiseMe &b» &3%{_undisguise}%&a is &cnot &adisguised &canymore !"
-			if {DM::MCVersion} >= 9: #Useless in 1.8
-				{DM::MCVersion} < 16
-				{@UpdateHand} is true
-				set {_packetHand} to new play_server_entity_equipment packet #Maybe not useful for all versions
-				set int field 0 of {_packetHand} to {_EId}
-				if {DM::MCVersion} is 8:
-					set int field 1 of {_packetHand} to 0
-				if {DM::MCVersion} > 8:
-					set itemslot field 0 of {_packetHand} to "mainhand"
-				set itemstack field 0 of {_packetHand} to {_undisguise}'s tool
 			if {@UpdateHead} is true:
 				set {_packetHead} to new play_server_entity_head_rotation packet
 				set int field 0 of {_packetHead} to {_undisguise}.getEntityId()
@@ -912,8 +1043,12 @@ command /undisguise [<offline player>]:
 			reveal {_undisguise} to {_playerlist::*}
 			if {DM::MCVersion} >= 9:
 				wait 1 tick
-			send packet {_packetHand} to {_playerlist::*}
 			send packet {_packetHead} to {_playerlist::*}
+			if {@UpdateStuff} is true:
+				if {DM::MCVersion} >= 16:
+					UpdateStuff16({_undisguise}, {_playerlist::*})
+				if {DM::MCVersion} <= 15:
+					UpdateStuff({_undisguise}, {_playerlist::*})
 		else:
 			if arg-1 is not set:
 				send "&6DisguiseMe &b» &3You &care not disguised !"
@@ -983,18 +1118,11 @@ on packet event play_server_named_entity_spawn: #Show the disguise when a player
 				set watchable collection field 0 of {_packetMeta} to {_WDW}
 		send packet {_packet} to player
 		send packet {_packetMeta} to player
-		if {@UpdateHand} is true:
+		if {@UpdateStuff} is true:
+			if {DM::MCVersion} >= 16:
+				UpdateStuff16({DM::IdToPlayer::%int pnum 0 of event-packet%}, player)
 			if {DM::MCVersion} <= 15:
-				set {_packetHand} to new play_server_entity_equipment packet
-				set int field 0 of {_packetHand} to int pnum 0 of event-packet
-				if {DM::MCVersion} is 8:
-					set int field 1 of {_packetHand} to 0
-				if {DM::MCVersion} > 8:
-					set itemslot field 0 of {_packetHand} to "mainhand"
-				set itemstack field 0 of {_packetHand} to {DM::IdToPlayer::%int pnum 0 of event-packet%}'s tool
-				send packet {_packetHand} to player
-			else:
-				UpdateHand16({DM::IdToPlayer::%int pnum 0 of event-packet%})
+				UpdateStuff({DM::IdToPlayer::%int pnum 0 of event-packet%}, player)
 	else:
 		if {@UpdateHead} is true:
 			wait 1 tick
@@ -1004,18 +1132,11 @@ on packet event play_server_named_entity_spawn: #Show the disguise when a player
 			set {_fYaw} to round({_yaw}*256/360) 
 			set byte field 0 of {_packetHead} to {_fYaw}
 			send packet {_packetHead} to player
-		if {@UpdateHand} is true:
+		if {@UpdateStuff} is true:
+			if {DM::MCVersion} >= 16:
+				UpdateStuff16({DM::IdToPlayer::%int pnum 0 of event-packet%}, player)
 			if {DM::MCVersion} <= 15:
-				set {_packetHand} to new play_server_entity_equipment packet
-				set int field 0 of {_packetHand} to int pnum 0 of event-packet
-				if {DM::MCVersion} is 8:
-					set int field 1 of {_packetHand} to 0
-				if {DM::MCVersion} > 8:
-					set itemslot field 0 of {_packetHand} to "mainhand"
-				set itemstack field 0 of {_packetHand} to {DM::IdToPlayer::%int pnum 0 of event-packet%}'s tool
-				send packet {_packetHand} to player
-			else:
-				UpdateHand16({DM::IdToPlayer::%int pnum 0 of event-packet%})
+				UpdateStuff({DM::IdToPlayer::%int pnum 0 of event-packet%}, player)
 		if {@SkinReload} is true:
 			SkinReload({DM::IdToPlayer::%int pnum 0 of event-packet%})
 on packet event play_client_settings: #Save the informations to use them later, with the function SkinReload 
@@ -1026,10 +1147,6 @@ on packet event play_client_settings: #Save the informations to use them later, 
 	set {DM::HiddenPSettings::%player%::ChatColor} to boolean field 0 of event-packet
 	set {DM::HiddenPSettings::%player%::Skin} to int field 1 of event-packet
 	set {DM::HiddenPSettings::%player%::Hand} to object field 5 of event-packet #hand field 0 of event-packet doesn't work in 1.15/1.16, so it must be stored as an object (sadly)
-on packet event play_client_held_item_slot:
-	{DM::MCVersion} >= 16
-	set {DM::ItemSlot::%player%} to int field 0 of event-packet #Show what the player is holding in 1.16
-
 
 #Functions: API
 #These functions are pretty similar to the code above, so I won't comment much here
@@ -1040,6 +1157,16 @@ function Disguise(p: players, mob: string, ForAll: boolean, ToPlayers: players) 
 		set {_id} to MobToId12({_mob}) 
 	if {DM::MCVersion} >= 16:	
 		set {_id} to MobToId16({_mob})
+		if {DM::MCSubVersion} > 1:
+			if {_id} >= 61:
+				add 1 to {_id}
+			if {_id} = -10:
+				set {_id} to 61 #Piglin brute
+		if {DM::MCVersion} >= 17:
+			if {_id} >= 61: #We never knows lmao
+				add 1 to {_id}
+			if {_id} = -10:
+				set {_id} to 61 
 	if {_id} is -1:
 		send "&c[DisguiseMe] Function called with a mob &b%{_mob}%&c that doesn't exist !" to console
 		return 0
@@ -1132,15 +1259,6 @@ function Disguise(p: players, mob: string, ForAll: boolean, ToPlayers: players) 
 				set {_Dw} to new DWObject(2 and {_Serializer})
 				{_WDW}.setObject({_Dw} and {_name})		
 				set watchable collection field 0 of {_packetMeta} to {_WDW}
-		if {@UpdateHand} is true:
-			if {DM::MCVersion} <= 15:
-				set {_packetHand} to new play_server_entity_equipment packet
-				set int field 0 of {_packetHand} to {_exception}.getEntityId()
-				if {DM::MCVersion} is 8:
-					set int field 1 of {_packetHand} to 0
-				if {DM::MCVersion} > 8:
-					set itemslot field 0 of {_packetHand} to "mainhand"
-				set itemstack field 0 of {_packetHand} to {_exception}'s tool
 		loop all players in radius 50 around {_exception}: 
 			clear {_pass}
 			if {_ForAll} is false: #Could be optimized by sending the packet to everyone that see the disguise (if there is only a few players)
@@ -1150,10 +1268,11 @@ function Disguise(p: players, mob: string, ForAll: boolean, ToPlayers: players) 
 			loop-player is not {_exception}
 			send packet {_packet} to loop-player
 			send packet {_packetMeta} to loop-player
-			send packet {_packetHand} to loop-player
-			if {@UpdateHand} is true:
-				{DM::MCVersion} >= 16
-				UpdateHand16({_exception})
+			if {@UpdateStuff} is true:
+				if {DM::MCVersion} >= 16:
+					UpdateStuff16({_exception}, loop-player)
+				if {DM::MCVersion} <= 15:
+					UpdateStuff({_exception}, loop-player)
 		set {DM::HIDDENPlayer::%{_uuid}%} to true
 		set {DM::HIDDENUUID::%{_eId}%} to {_uuid}
 		set {DM::HIDDENId::%{_eId}%} to {_exception}
@@ -1173,25 +1292,20 @@ function Undisguise(p: offline players):
 			clear {DM::HIDDENUUID::%{_EId}%}
 			clear {DM::HIDDENId::%{_EId}%}
 			clear {DM::HIDDENDisguise::%{_EId}%}
-			if {@UpdateHand} is true:
-				{DM::MCVersion} <= 15
-				set {_packetHand} to new play_server_entity_equipment packet
-				set int field 0 of {_packetHand} to {_EId}
-				if {DM::MCVersion} is 8:
-					set int field 1 of {_packetHand} to 0
-				if {DM::MCVersion} > 8:
-					set itemslot field 0 of {_packetHand} to "mainhand"
-				set itemstack field 0 of {_packetHand} to loop-value's tool
 			if {@UpdateHead} is true:
 				set {_packetHead} to new play_server_entity_head_rotation packet
 				set int field 0 of {_packetHead} to {_EId}
-				set {_yaw} to ({_undisguise}'s location).getYaw()
+				set {_yaw} to (loop-value's location).getYaw()
 				set {_fYaw} to round({_yaw}*256/360)
 				set byte field 0 of {_packetHead} to {_fyaw}
 			set {_playerlist::*} to all players in radius 50 around loop-value
 			hide loop-value-1 from {_playerlist::*} 
 			reveal loop-value-1 to {_playerlist::*}
-			send packet {_packetHand} to {_playerlist::*}
+			if {@UpdateStuff} is true:
+				if {DM::MCVersion} >= 16:
+					UpdateStuff16(loop-value, {_playerlist::*})
+				if {DM::MCVersion} <= 15:
+					UpdateStuff(loop-value, {_playerlist::*})
 			wait 1 tick
 			send packet {_packetHead} to {_playerlist::*}
 			clear {DM::HiddenList::%{_EId}%::*}
@@ -1208,15 +1322,6 @@ function UndisguiseOnline(p: players):
 		clear {DM::HIDDENUUID::%{_EId}%}
 		clear {DM::HIDDENId::%{_EId}%}
 		clear {DM::HIDDENDisguise::%{_EId}%}
-		if {@UpdateHand} is true:
-			{DM::MCVersion} <= 15
-			set {_packetHand} to new play_server_entity_equipment packet
-			set int field 0 of {_packetHand} to {_EId}
-			if {DM::MCVersion} is 8:
-				set int field 1 of {_packetHand} to 0
-			if {DM::MCVersion} > 8:
-				set itemslot field 0 of {_packetHand} to "mainhand"
-			set itemstack field 0 of {_packetHand} to loop-value's tool
 		if {@UpdateHead} is true:
 			set {_packetHead} to new play_server_entity_head_rotation packet
 			set int field 0 of {_packetHead} to {_EId}
@@ -1226,7 +1331,11 @@ function UndisguiseOnline(p: players):
 		set {_playerlist::*} to all players in radius 50 around loop-value
 		hide loop-value-1 from {_playerlist::*} 
 		reveal loop-value-1 to {_playerlist::*} 
-		send packet {_packetHand} to {_playerlist::*} 
+		if {@UpdateStuff} is true:
+			if {DM::MCVersion} >= 16:
+				UpdateStuff16(loop-value, {_playerlist::*})
+			if {DM::MCVersion} <= 15:
+				UpdateStuff(loop-value, {_playerlist::*})
 		wait 1 tick
 		send packet {_packetHead} to {_playerlist::*}
 		clear {DM::HiddenList::%{_EId}%::*}
